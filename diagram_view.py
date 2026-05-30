@@ -5,67 +5,35 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPen, QBrush, QColor
 from data_models import BusData, LineData
 
-class BusDialog(QDialog):
+from PyQt6.QtWidgets import QCheckBox
+
+class BusCheckboxDialog(QDialog):
     def __init__(self, bus: BusData, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Edit Bus: {bus.name}")
+        self.setWindowTitle(f"Controles: Barra {bus.name}")
         self.bus = bus
         self.layout = QVBoxLayout(self)
 
-        self.p_load_edit = QLineEdit(str(bus.p_load_kw))
-        self.q_load_edit = QLineEdit(str(bus.q_load_kvar))
-        self.p_gen_edit = QLineEdit(str(bus.p_gen_kw))
+        self.chk_gen = QCheckBox("Geração Ativa")
+        self.chk_gen.setChecked(bus.gen_enabled)
+        self.chk_p_load = QCheckBox("Carga Ativa")
+        self.chk_p_load.setChecked(bus.p_load_enabled)
+        self.chk_q_load = QCheckBox("Carga Reativa")
+        self.chk_q_load.setChecked(bus.q_load_enabled)
 
-        self.layout.addWidget(QLabel("Active Load (kW):"))
-        self.layout.addWidget(self.p_load_edit)
-        self.layout.addWidget(QLabel("Reactive Load (kVAr):"))
-        self.layout.addWidget(self.q_load_edit)
-        self.layout.addWidget(QLabel("Generation (kW):"))
-        self.layout.addWidget(self.p_gen_edit)
+        self.layout.addWidget(self.chk_gen)
+        self.layout.addWidget(self.chk_p_load)
+        self.layout.addWidget(self.chk_q_load)
 
-        save_btn = QPushButton("Save")
+        save_btn = QPushButton("Aplicar")
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
     def save_data(self):
-        try:
-            self.bus.p_load_kw = float(self.p_load_edit.text())
-            self.bus.q_load_kvar = float(self.q_load_edit.text())
-            self.bus.p_gen_kw = float(self.p_gen_edit.text())
-            self.accept()
-        except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter numeric values.")
-
-class LineDialog(QDialog):
-    def __init__(self, line: LineData, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle(f"Edit Line: {line.id}")
-        self.line = line
-        self.layout = QVBoxLayout(self)
-
-        self.r_edit = QLineEdit(str(line.r_ohm_per_km))
-        self.x_edit = QLineEdit(str(line.x_ohm_per_km))
-        self.length_edit = QLineEdit(str(line.length_km))
-
-        self.layout.addWidget(QLabel("Resistance (Ohm/km):"))
-        self.layout.addWidget(self.r_edit)
-        self.layout.addWidget(QLabel("Reactance (Ohm/km):"))
-        self.layout.addWidget(self.x_edit)
-        self.layout.addWidget(QLabel("Length (km):"))
-        self.layout.addWidget(self.length_edit)
-
-        save_btn = QPushButton("Save")
-        save_btn.clicked.connect(self.save_data)
-        self.layout.addWidget(save_btn)
-
-    def save_data(self):
-        try:
-            self.line.r_ohm_per_km = float(self.r_edit.text())
-            self.line.x_ohm_per_km = float(self.x_edit.text())
-            self.line.length_km = float(self.length_edit.text())
-            self.accept()
-        except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter numeric values.")
+        self.bus.gen_enabled = self.chk_gen.isChecked()
+        self.bus.p_load_enabled = self.chk_p_load.isChecked()
+        self.bus.q_load_enabled = self.chk_q_load.isChecked()
+        self.accept()
 
 class GraphBusItem(QGraphicsEllipseItem):
     def __init__(self, x, y, radius, bus: BusData, diagram_view):
@@ -77,7 +45,7 @@ class GraphBusItem(QGraphicsEllipseItem):
         self.setToolTip(f"{bus.name}\nType: {bus.type}")
 
     def mouseDoubleClickEvent(self, event):
-        dialog = BusDialog(self.bus, self.diagram_view)
+        dialog = BusCheckboxDialog(self.bus, self.diagram_view)
         if dialog.exec():
             self.diagram_view.data_updated.emit()
 
@@ -90,11 +58,6 @@ class GraphLineItem(QGraphicsLineItem):
         pen.setWidth(3)
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
-
-    def mouseDoubleClickEvent(self, event):
-        dialog = LineDialog(self.line_data, self.diagram_view)
-        if dialog.exec():
-            self.diagram_view.data_updated.emit()
 
 class NetworkDiagram(QGraphicsView):
     data_updated = pyqtSignal()
@@ -112,17 +75,29 @@ class NetworkDiagram(QGraphicsView):
         self.scene.clear()
         self.bus_coords.clear()
 
-        # Simple layout generation for 13 buses
-        import math
-        center_x, center_y = 300, 300
-        radius = 200
-        n_buses = len(system_state.buses)
+        # Hardcoded layout based on the IEEE 13 bus system image
+        # x, y coordinates
+        coords = {
+            650: (400, 100),
+            632: (400, 200),
+            645: (250, 200),
+            646: (100, 200),
+            633: (550, 200),
+            634: (700, 200),
+            671: (400, 400),
+            684: (250, 400),
+            611: (100, 400),
+            652: (250, 550),
+            692: (550, 400),
+            675: (700, 400),
+            680: (400, 550)
+        }
 
-        for i, (bus_id, bus) in enumerate(system_state.buses.items()):
-            angle = 2 * math.pi * i / n_buses if n_buses > 0 else 0
-            x = center_x + radius * math.cos(angle)
-            y = center_y + radius * math.sin(angle)
-            self.bus_coords[bus_id] = (x, y)
+        for bus_id, bus in system_state.buses.items():
+            if bus_id in coords:
+                self.bus_coords[bus_id] = coords[bus_id]
+            else:
+                self.bus_coords[bus_id] = (400, 300) # fallback
 
         # Draw lines
         for line_id, line in system_state.lines.items():

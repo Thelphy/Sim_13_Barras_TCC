@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from data_models import SystemState, BusData, LineData
@@ -38,39 +38,92 @@ class MainController:
         self.populate_target_combo()
 
     def init_default_data(self):
-        # 13 Bus system (Simplified generic parameters)
-        # Bus 1 is Slack, Bus 2-13 are PQ or PV
-        self.state.buses[1] = BusData(id=1, name="B1 (Slack)", vn_kv=13.8, type='slack', v_target_pu=1.0)
-        self.state.buses[2] = BusData(id=2, name="B2", vn_kv=13.8, type='pq', p_load_kw=1000, q_load_kvar=500)
-        self.state.buses[3] = BusData(id=3, name="B3", vn_kv=13.8, type='pq', p_load_kw=800, q_load_kvar=400)
-        self.state.buses[4] = BusData(id=4, name="B4", vn_kv=13.8, type='pq', p_load_kw=1200, q_load_kvar=600)
-        self.state.buses[5] = BusData(id=5, name="B5", vn_kv=13.8, type='pq', p_load_kw=500, q_load_kvar=200)
-        self.state.buses[6] = BusData(id=6, name="B6", vn_kv=13.8, type='pq', p_load_kw=400, q_load_kvar=150)
-        self.state.buses[7] = BusData(id=7, name="B7", vn_kv=13.8, type='pq', p_load_kw=900, q_load_kvar=450)
-        self.state.buses[8] = BusData(id=8, name="B8", vn_kv=13.8, type='pq', p_load_kw=1100, q_load_kvar=550)
-        self.state.buses[9] = BusData(id=9, name="B9", vn_kv=13.8, type='pq', p_load_kw=600, q_load_kvar=300)
-        self.state.buses[10] = BusData(id=10, name="B10", vn_kv=13.8, type='pq', p_load_kw=700, q_load_kvar=350)
-        self.state.buses[11] = BusData(id=11, name="B11", vn_kv=13.8, type='pq', p_load_kw=850, q_load_kvar=400)
-        self.state.buses[12] = BusData(id=12, name="B12", vn_kv=13.8, type='pq', p_load_kw=950, q_load_kvar=450)
-        self.state.buses[13] = BusData(id=13, name="B13", vn_kv=13.8, type='pq', p_load_kw=1050, q_load_kvar=500)
+        # 13 Bus system based on IEEE 13 Node Test Feeder layout
+        self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=115.0, type='slack', v_target_pu=1.0)
+        self.state.buses[632] = BusData(id=632, name="632", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
+        self.state.buses[645] = BusData(id=645, name="645", vn_kv=4.16, type='pq', p_load_kw=170, q_load_kvar=125)
+        self.state.buses[646] = BusData(id=646, name="646", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
+        self.state.buses[633] = BusData(id=633, name="633", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
+        self.state.buses[634] = BusData(id=634, name="634", vn_kv=0.48, type='pq', p_load_kw=400, q_load_kvar=290)
+        self.state.buses[671] = BusData(id=671, name="671", vn_kv=4.16, type='pq', p_load_kw=1155, q_load_kvar=660)
+        self.state.buses[684] = BusData(id=684, name="684", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
+        self.state.buses[611] = BusData(id=611, name="611", vn_kv=4.16, type='pq', p_load_kw=170, q_load_kvar=80)
+        self.state.buses[652] = BusData(id=652, name="652", vn_kv=4.16, type='pq', p_load_kw=128, q_load_kvar=86)
+        self.state.buses[692] = BusData(id=692, name="692", vn_kv=4.16, type='pq', p_load_kw=170, q_load_kvar=151)
+        self.state.buses[675] = BusData(id=675, name="675", vn_kv=4.16, type='pq', p_load_kw=843, q_load_kvar=462)
+        self.state.buses[680] = BusData(id=680, name="680", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
 
-        # Connect the buses radially/meshed
-        self.state.lines[1] = LineData(1, 1, 2, 5.0, 0.1, 0.3)
-        self.state.lines[2] = LineData(2, 2, 3, 2.0, 0.05, 0.1)
-        self.state.lines[3] = LineData(3, 3, 4, 3.0, 0.08, 0.15)
-        self.state.lines[4] = LineData(4, 2, 5, 4.0, 0.12, 0.2)
-        self.state.lines[5] = LineData(5, 5, 6, 2.5, 0.06, 0.12)
-        self.state.lines[6] = LineData(6, 4, 7, 3.5, 0.09, 0.18)
-        self.state.lines[7] = LineData(7, 7, 8, 1.5, 0.04, 0.08)
-        self.state.lines[8] = LineData(8, 5, 9, 4.5, 0.11, 0.22)
-        self.state.lines[9] = LineData(9, 9, 10, 2.0, 0.05, 0.1)
-        self.state.lines[10] = LineData(10, 10, 11, 3.0, 0.07, 0.14)
-        self.state.lines[11] = LineData(11, 8, 12, 5.5, 0.13, 0.25)
-        self.state.lines[12] = LineData(12, 12, 13, 1.0, 0.02, 0.05)
+        # Connect the buses
+        # (id, from, to, length, r, x)
+        self.state.lines[1] = LineData(1, 650, 632, 0.0, 0.0, 0.0, is_transformer=True) # Assuming transformer between 650 and 632 based on typical models, though diagram shows it's a transformer. Actually, let's look at diagram closely.
+        # Wait, diagram shows trafo between 650 and 632, and another between 633 and 634.
+        # Let's set 633-634 as transformer explicitly as requested.
+        self.state.lines[2] = LineData(2, 632, 645, 0.15, 0.3, 0.8)
+        self.state.lines[3] = LineData(3, 645, 646, 0.09, 0.3, 0.8)
+        self.state.lines[4] = LineData(4, 632, 633, 0.15, 0.3, 0.8)
+        self.state.lines[5] = LineData(5, 633, 634, 0.0, 0.0, 0.0, is_transformer=True)
+        self.state.lines[6] = LineData(6, 632, 671, 0.60, 0.3, 0.8)
+        self.state.lines[7] = LineData(7, 671, 684, 0.09, 0.3, 0.8)
+        self.state.lines[8] = LineData(8, 684, 611, 0.09, 0.3, 0.8)
+        self.state.lines[9] = LineData(9, 684, 652, 0.24, 0.3, 0.8)
+        self.state.lines[10] = LineData(10, 671, 692, 0.0, 0.0, 0.0) # switch
+        self.state.lines[11] = LineData(11, 692, 675, 0.15, 0.3, 0.8)
+        self.state.lines[12] = LineData(12, 671, 680, 0.30, 0.3, 0.8)
+
+        self.populate_params_tables()
 
     def setup_connections(self):
         self.ui.btn_simulate.clicked.connect(self.run_simulation)
-        self.ui.diagram_view.data_updated.connect(self.update_diagram)
+        self.ui.diagram_view.data_updated.connect(self.on_diagram_data_updated)
+        self.ui.btn_save_params.clicked.connect(self.save_params)
+
+    def on_diagram_data_updated(self):
+        self.update_diagram()
+        self.populate_params_tables()
+        self.run_simulation()
+
+    def populate_params_tables(self):
+        # Populate Buses
+        self.ui.table_params_buses.setRowCount(len(self.state.buses))
+        self.ui.table_params_buses.setColumnCount(4)
+        self.ui.table_params_buses.setHorizontalHeaderLabels(["ID", "P Load (kW)", "Q Load (kVAr)", "Geração (kW)"])
+        for i, (bus_id, bus) in enumerate(self.state.buses.items()):
+            self.ui.table_params_buses.setItem(i, 0, QTableWidgetItem(str(bus.id)))
+            self.ui.table_params_buses.setItem(i, 1, QTableWidgetItem(str(bus.p_load_kw)))
+            self.ui.table_params_buses.setItem(i, 2, QTableWidgetItem(str(bus.q_load_kvar)))
+            self.ui.table_params_buses.setItem(i, 3, QTableWidgetItem(str(bus.p_gen_kw)))
+
+        # Populate Lines
+        self.ui.table_params_lines.setRowCount(len(self.state.lines))
+        self.ui.table_params_lines.setColumnCount(4)
+        self.ui.table_params_lines.setHorizontalHeaderLabels(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
+        for i, (line_id, line) in enumerate(self.state.lines.items()):
+            self.ui.table_params_lines.setItem(i, 0, QTableWidgetItem(str(line.id)))
+            self.ui.table_params_lines.setItem(i, 1, QTableWidgetItem(str(line.r_ohm_per_km)))
+            self.ui.table_params_lines.setItem(i, 2, QTableWidgetItem(str(line.x_ohm_per_km)))
+            self.ui.table_params_lines.setItem(i, 3, QTableWidgetItem(str(line.length_km)))
+
+    def save_params(self):
+        try:
+            for i in range(self.ui.table_params_buses.rowCount()):
+                bus_id = int(self.ui.table_params_buses.item(i, 0).text())
+                if bus_id in self.state.buses:
+                    self.state.buses[bus_id].p_load_kw = float(self.ui.table_params_buses.item(i, 1).text())
+                    self.state.buses[bus_id].q_load_kvar = float(self.ui.table_params_buses.item(i, 2).text())
+                    self.state.buses[bus_id].p_gen_kw = float(self.ui.table_params_buses.item(i, 3).text())
+
+            for i in range(self.ui.table_params_lines.rowCount()):
+                line_id = int(self.ui.table_params_lines.item(i, 0).text())
+                if line_id in self.state.lines:
+                    self.state.lines[line_id].r_ohm_per_km = float(self.ui.table_params_lines.item(i, 1).text())
+                    self.state.lines[line_id].x_ohm_per_km = float(self.ui.table_params_lines.item(i, 2).text())
+                    self.state.lines[line_id].length_km = float(self.ui.table_params_lines.item(i, 3).text())
+
+            self.update_diagram()
+            QMessageBox.information(self.ui, "Sucesso", "Parâmetros salvos com sucesso!")
+            self.run_simulation()
+        except ValueError:
+            QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
 
     def populate_target_combo(self):
         self.ui.combo_target_bus.clear()
