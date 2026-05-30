@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QTabWidget, QPushButton, QComboBox, QLabel,
-                             QTableWidget, QSplitter)
-from PyQt6.QtCore import Qt
+                             QTableWidget, QSplitter, QGraphicsDropShadowEffect)
+from PyQt6.QtCore import Qt, QTimer
 from diagram_view import NetworkDiagram
 from plot_utils import PVPlotWidget
 
@@ -58,6 +58,59 @@ QHeaderView::section {
 }
 """
 
+class ToastNotification(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        self.layout = QVBoxLayout(self)
+        self.layout.setContentsMargins(10, 10, 10, 10)
+
+        self.card = QWidget()
+        self.card.setObjectName("card")
+        self.card_layout = QHBoxLayout(self.card)
+
+        self.label = QLabel("")
+        self.label.setStyleSheet("color: white; font-weight: bold;")
+        self.card_layout.addWidget(self.label)
+
+        self.layout.addWidget(self.card)
+
+        # Shadow
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(10)
+        shadow.setColor(Qt.GlobalColor.black)
+        shadow.setOffset(0, 0)
+        self.card.setGraphicsEffect(shadow)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.hide)
+
+        self.hide()
+
+    def show_toast(self, message, is_success, parent_widget, duration=3000):
+        self.label.setText(message)
+        if is_success:
+            self.card.setStyleSheet("QWidget#card { background-color: #28a745; border-radius: 5px; padding: 10px; }")
+        else:
+            self.card.setStyleSheet("QWidget#card { background-color: #dc3545; border-radius: 5px; padding: 10px; }")
+
+        self.adjustSize()
+
+        if parent_widget:
+            # Position at top right of parent
+            parent_geom = parent_widget.geometry()
+            parent_pos = parent_widget.mapToGlobal(parent_widget.rect().topLeft())
+
+            x = parent_pos.x() + parent_geom.width() - self.width() - 20
+            y = parent_pos.y() + 20
+
+            self.move(x, y)
+
+        self.show()
+        self.timer.start(duration)
+
 class MainWindowUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -76,6 +129,8 @@ class MainWindowUI(QMainWindow):
         self.setup_tab_params()
         self.setup_tab2()
         self.setup_tab3()
+
+        self.toast = ToastNotification(self)
 
     def setup_tab1(self):
         self.tab1 = QWidget()

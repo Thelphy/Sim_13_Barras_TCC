@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsEllipseItem,
                              QGraphicsLineItem, QGraphicsTextItem, QDialog, QVBoxLayout,
-                             QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox)
+                             QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
+                             QGraphicsItemGroup)
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPen, QBrush, QColor
 from data_models import BusData, LineData
@@ -92,6 +93,68 @@ class GraphLineItem(QGraphicsLineItem):
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
 
+class GraphTrafoItem(QGraphicsItemGroup):
+    def __init__(self, x1, y1, x2, y2, line: LineData, diagram_view):
+        super().__init__()
+        self.line_data = line
+        self.diagram_view = diagram_view
+        self.setToolTip(f"Trafo {line.id}")
+
+        # Draw a line from (x1,y1) to (x2,y2) but interrupted by two circles in the middle
+        mx = (x1 + x2) / 2
+        my = (y1 + y2) / 2
+
+        # Draw two intersecting circles
+        r = 10
+        pen = QPen(QColor(200, 200, 200))
+        pen.setWidth(2)
+
+        # Calculate angle of the line
+        import math
+        dx = x2 - x1
+        dy = y2 - y1
+        length = math.hypot(dx, dy)
+
+        if length == 0:
+            return
+
+        ux = dx / length
+        uy = dy / length
+
+        # Centers for the two circles
+        cx1 = mx - ux * (r - 2)
+        cy1 = my - uy * (r - 2)
+
+        cx2 = mx + ux * (r - 2)
+        cy2 = my + uy * (r - 2)
+
+        c1 = QGraphicsEllipseItem(cx1 - r, cy1 - r, r * 2, r * 2)
+        c2 = QGraphicsEllipseItem(cx2 - r, cy2 - r, r * 2, r * 2)
+
+        c1.setPen(pen)
+        c2.setPen(pen)
+        c1.setBrush(QBrush(QColor(30, 30, 30))) # Match background
+        c2.setBrush(QBrush(QColor(30, 30, 30)))
+
+        # Lines from endpoints to the edge of the circles
+        l1_end_x = cx1 - ux * r
+        l1_end_y = cy1 - uy * r
+
+        l2_start_x = cx2 + ux * r
+        l2_start_y = cy2 + uy * r
+
+        line1 = QGraphicsLineItem(x1, y1, l1_end_x, l1_end_y)
+        line2 = QGraphicsLineItem(l2_start_x, l2_start_y, x2, y2)
+
+        line1.setPen(pen)
+        line2.setPen(pen)
+
+        self.addToGroup(line1)
+        self.addToGroup(line2)
+        self.addToGroup(c1)
+        self.addToGroup(c2)
+
+
 class NetworkDiagram(QGraphicsView):
     data_updated = pyqtSignal()
 
@@ -137,8 +200,11 @@ class NetworkDiagram(QGraphicsView):
             if line.from_bus in self.bus_coords and line.to_bus in self.bus_coords:
                 x1, y1 = self.bus_coords[line.from_bus]
                 x2, y2 = self.bus_coords[line.to_bus]
-                line_item = GraphLineItem(x1, y1, x2, y2, line, self)
-                self.scene.addItem(line_item)
+                if line.is_transformer:
+                    item = GraphTrafoItem(x1, y1, x2, y2, line, self)
+                else:
+                    item = GraphLineItem(x1, y1, x2, y2, line, self)
+                self.scene.addItem(item)
 
         # Draw buses (after lines so they appear on top)
         bus_radius = 15

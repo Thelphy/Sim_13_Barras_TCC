@@ -39,15 +39,27 @@ class PowerSystemEngine:
             to_idx = self.bus_mapping[line.to_bus]
             if line.is_transformer:
                 # We assume generic parameters for the transformer
-                # from_bus is HV side, to_bus is LV side
-                vn_hv_kv = self.net.bus.at[from_idx, 'vn_kv']
-                vn_lv_kv = self.net.bus.at[to_idx, 'vn_kv']
+                # Ensure hv_bus is the one with higher voltage
+                vn_from = self.net.bus.at[from_idx, 'vn_kv']
+                vn_to = self.net.bus.at[to_idx, 'vn_kv']
+
+                if vn_from >= vn_to:
+                    hv_bus = from_idx
+                    lv_bus = to_idx
+                    vn_hv_kv = vn_from
+                    vn_lv_kv = vn_to
+                else:
+                    hv_bus = to_idx
+                    lv_bus = from_idx
+                    vn_hv_kv = vn_to
+                    vn_lv_kv = vn_from
+
                 sn_mva = 5.0 # default sn_mva
                 vk_percent = 5.0
                 vkr_percent = 1.0
                 pfe_kw = 10.0
                 i0_percent = 0.5
-                pp.create_transformer_from_parameters(self.net, hv_bus=from_idx, lv_bus=to_idx,
+                pp.create_transformer_from_parameters(self.net, hv_bus=hv_bus, lv_bus=lv_bus,
                                                       sn_mva=sn_mva, vn_hv_kv=vn_hv_kv, vn_lv_kv=vn_lv_kv,
                                                       vk_percent=vk_percent, vkr_percent=vkr_percent,
                                                       pfe_kw=pfe_kw, i0_percent=i0_percent,
