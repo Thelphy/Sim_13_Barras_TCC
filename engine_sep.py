@@ -66,30 +66,31 @@ class PowerSystemEngine:
             pp.runpp(self.net)
             self.results.success = True
 
-            # Extract Bus Results
-            bus_res = []
-            for idx, row in self.net.res_bus.iterrows():
-                bus_name = self.net.bus.loc[idx, 'name']
-                v_pu = row['vm_pu']
-                va_deg = row['va_degree']
-                p_mw = row['p_mw']
-                q_mvar = row['q_mvar']
-                bus_res.append([bus_name, f"{v_pu:.4f}", f"{va_deg:.2f}", f"{p_mw:.2f}", f"{q_mvar:.2f}"])
-            self.results.bus_results = bus_res
+            # Extract Bus Results using vectorized numpy array iteration
+            bus_names = self.net.bus['name'].values
+            vm_pu = self.net.res_bus['vm_pu'].values
+            va_deg = self.net.res_bus['va_degree'].values
+            p_mw = self.net.res_bus['p_mw'].values
+            q_mvar = self.net.res_bus['q_mvar'].values
 
-            # Extract Line Results
-            line_res = []
-            for idx, row in self.net.res_line.iterrows():
-                line_name = self.net.line.loc[idx, 'name']
-                p_from_mw = row['p_from_mw']
-                q_from_mvar = row['q_from_mvar']
-                p_to_mw = row['p_to_mw']
-                q_to_mvar = row['q_to_mvar']
-                pl_mw = row['pl_mw']
-                ql_mvar = row['ql_mvar']
-                loading = row['loading_percent']
-                line_res.append([line_name, f"{p_from_mw:.2f}", f"{q_from_mvar:.2f}", f"{p_to_mw:.2f}", f"{q_to_mvar:.2f}", f"{pl_mw:.4f}", f"{loading:.2f}"])
-            self.results.line_results = line_res
+            self.results.bus_results = [
+                [str(name), f"{v:.4f}", f"{va:.2f}", f"{p:.2f}", f"{q:.2f}"]
+                for name, v, va, p, q in zip(bus_names, vm_pu, va_deg, p_mw, q_mvar)
+            ]
+
+            # Extract Line Results using vectorized numpy array iteration
+            line_names = self.net.line['name'].values
+            p_from_mw = self.net.res_line['p_from_mw'].values
+            q_from_mvar = self.net.res_line['q_from_mvar'].values
+            p_to_mw = self.net.res_line['p_to_mw'].values
+            q_to_mvar = self.net.res_line['q_to_mvar'].values
+            pl_mw = self.net.res_line['pl_mw'].values
+            loading = self.net.res_line['loading_percent'].values
+
+            self.results.line_results = [
+                [str(name), f"{pf:.2f}", f"{qf:.2f}", f"{pt:.2f}", f"{qt:.2f}", f"{pl:.4f}", f"{load:.2f}"]
+                for name, pf, qf, pt, qt, pl, load in zip(line_names, p_from_mw, q_from_mvar, p_to_mw, q_to_mvar, pl_mw, loading)
+            ]
 
         except Exception as e:
             self.results.success = False
