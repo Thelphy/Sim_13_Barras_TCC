@@ -135,29 +135,35 @@ class PowerSystemEngine:
             print("Power flow failed: An unexpected error occurred.")
 
     def run_modal_analysis(self):
-        # Modal Analysis using Newton-Raphson Jacobian (J_R)
+        # Modal Analysis using exact Newton-Raphson Jacobian (J_R)
         if not self.results.success:
             return
 
         try:
             ppc = self.net._ppc
-            if 'J' not in ppc['internal']:
+            if 'Ybus' not in ppc['internal'] or 'V' not in ppc['internal']:
                 return
 
-            J = ppc['internal']['J'].toarray()
+            Ybus = ppc['internal']['Ybus']
+            V = ppc['internal']['V']
 
             from pandapower.pypower.bustypes import bustypes
+            from pandapower.pypower.dSbus_dV import dSbus_dV
+
             ref, pv, pq = bustypes(ppc['bus'], ppc['gen'])
+            pvpq = np.r_[pv, pq]
+
+            dS_dVm, dS_dVa = dSbus_dV(Ybus, V)
 
             n_pq = len(pq)
-            n_npv = len(pq) + len(pv)
+            n_npv = len(pvpq)
 
             if n_pq > 0:
                 # Submatrices of the full Jacobian J
-                J11 = J[:n_npv, :n_npv]
-                J12 = J[:n_npv, n_npv:]
-                J21 = J[n_npv:, :n_npv]
-                J22 = J[n_npv:, n_npv:]
+                J11 = dS_dVa.real[np.ix_(pvpq, pvpq)].toarray()
+                J12 = dS_dVm.real[np.ix_(pvpq, pq)].toarray()
+                J21 = dS_dVa.imag[np.ix_(pq, pvpq)].toarray()
+                J22 = dS_dVm.imag[np.ix_(pq, pq)].toarray()
 
                 # Reduced Jacobian JR = J22 - J21 * inv(J11) * J12
                 J11_inv = np.linalg.inv(J11)
