@@ -46,14 +46,11 @@ class LineDialog(QDialog):
         self.x_edit = QLineEdit(str(line.x_ohm_per_km))
         self.length_edit = QLineEdit(str(line.length_km))
 
-        self.layout.addWidget(QLabel("Resistance (Ohm/km):"))
-        self.layout.addWidget(self.r_edit)
-        self.layout.addWidget(QLabel("Reactance (Ohm/km):"))
-        self.layout.addWidget(self.x_edit)
-        self.layout.addWidget(QLabel("Length (km):"))
-        self.layout.addWidget(self.length_edit)
+        self.layout.addWidget(self.chk_gen)
+        self.layout.addWidget(self.chk_p_load)
+        self.layout.addWidget(self.chk_q_load)
 
-        save_btn = QPushButton("Save")
+        save_btn = QPushButton("Aplicar")
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
