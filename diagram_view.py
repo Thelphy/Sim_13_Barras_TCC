@@ -14,11 +14,11 @@ class BusCheckboxDialog(QDialog):
         self.bus = bus
         self.layout = QVBoxLayout(self)
 
-        self.chk_gen = QCheckBox("Geração Ativa")
+        self.chk_gen = QCheckBox("Geração (kW)")
         self.chk_gen.setChecked(bus.gen_enabled)
-        self.chk_p_load = QCheckBox("Carga Ativa")
+        self.chk_p_load = QCheckBox("P Load (kW)")
         self.chk_p_load.setChecked(bus.p_load_enabled)
-        self.chk_q_load = QCheckBox("Carga Reativa")
+        self.chk_q_load = QCheckBox("Q Load (VAr)")
         self.chk_q_load.setChecked(bus.q_load_enabled)
 
         self.layout.addWidget(self.chk_gen)

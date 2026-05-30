@@ -123,8 +123,15 @@ class MainWindowUI(QMainWindow):
         splitter.addWidget(bottom_widget)
         layout.addWidget(splitter)
 
+        btn_layout = QHBoxLayout()
+        self.btn_export_params = QPushButton("Exportar Dados (CSV)")
+        self.btn_import_params = QPushButton("Importar Dados (CSV)")
+        btn_layout.addWidget(self.btn_export_params)
+        btn_layout.addWidget(self.btn_import_params)
+
         self.btn_save_params = QPushButton("Salvar Alterações")
-        layout.addWidget(self.btn_save_params)
+        btn_layout.addWidget(self.btn_save_params)
+        layout.addLayout(btn_layout)
 
         self.tabs.addTab(self.tab_params, "Parâmetros")
 
