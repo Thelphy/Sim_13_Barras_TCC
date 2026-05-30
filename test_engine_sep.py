@@ -49,3 +49,11 @@ def test_run_modal_analysis_generic_exception(capsys):
     captured = capsys.readouterr()
     assert "Modal analysis failed: An unexpected error occurred." in captured.out
     assert "Secret modal error" not in captured.out
+
+def test_generate_pv_curve_not_success():
+    engine = PowerSystemEngine()
+    engine.results.success = False
+
+    result = engine.generate_pv_curve("Bus 1")
+
+    assert result is None
