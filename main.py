@@ -47,7 +47,7 @@ class MainController:
 
     def init_default_data(self):
         # 13 Bus system based on IEEE 13 Node Test Feeder layout
-        self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=115.0, type='slack', v_target_pu=1.0)
+        self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=4.16, type='slack', v_target_pu=1.0)
         self.state.buses[632] = BusData(id=632, name="632", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
         self.state.buses[645] = BusData(id=645, name="645", vn_kv=4.16, type='pq', p_load_kw=170, q_load_kvar=125)
         self.state.buses[646] = BusData(id=646, name="646", vn_kv=4.16, type='pq', p_load_kw=0, q_load_kvar=0)
@@ -63,9 +63,7 @@ class MainController:
 
         # Connect the buses
         # (id, from, to, length, r, x)
-        self.state.lines[1] = LineData(1, 650, 632, 0.0, 0.0, 0.0, is_transformer=True) # Assuming transformer between 650 and 632 based on typical models, though diagram shows it's a transformer. Actually, let's look at diagram closely.
-        # Wait, diagram shows trafo between 650 and 632, and another between 633 and 634.
-        # Let's set 633-634 as transformer explicitly as requested.
+        self.state.lines[1] = LineData(1, 650, 632, 0.1, 0.3, 0.8, is_transformer=False)
         self.state.lines[2] = LineData(2, 632, 645, 0.15, 0.3, 0.8)
         self.state.lines[3] = LineData(3, 645, 646, 0.09, 0.3, 0.8)
         self.state.lines[4] = LineData(4, 632, 633, 0.15, 0.3, 0.8)
@@ -74,7 +72,7 @@ class MainController:
         self.state.lines[7] = LineData(7, 671, 684, 0.09, 0.3, 0.8)
         self.state.lines[8] = LineData(8, 684, 611, 0.09, 0.3, 0.8)
         self.state.lines[9] = LineData(9, 684, 652, 0.24, 0.3, 0.8)
-        self.state.lines[10] = LineData(10, 671, 692, 0.0, 0.0, 0.0) # switch
+        self.state.lines[10] = LineData(10, 671, 692, 0.01, 0.01, 0.01) # switch (avoid divide by zero)
         self.state.lines[11] = LineData(11, 692, 675, 0.15, 0.3, 0.8)
         self.state.lines[12] = LineData(12, 671, 680, 0.30, 0.3, 0.8)
 
