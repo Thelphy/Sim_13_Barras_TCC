@@ -20,23 +20,46 @@ class PowerSystemEngine:
 
             if bus.type == 'slack':
                 pp.create_ext_grid(self.net, bus=idx, vm_pu=bus.v_target_pu, name=f"ExtGrid {bus.name}")
-            elif bus.type == 'pv':
+            elif bus.type == 'pv' and bus.gen_enabled:
                 pp.create_gen(self.net, bus=idx, p_mw=bus.p_gen_kw/1000.0, vm_pu=bus.v_target_pu, name=f"Gen {bus.name}")
 
+            # If it is a PQ bus but it has generation and generation is enabled
+            if bus.type == 'pq' and bus.gen_enabled and bus.p_gen_kw > 0:
+                pp.create_sgen(self.net, bus=idx, p_mw=bus.p_gen_kw/1000.0, name=f"SGen {bus.name}")
+
             # Add loads
-            if bus.p_load_kw > 0 or bus.q_load_kvar > 0:
-                pp.create_load(self.net, bus=idx, p_mw=bus.p_load_kw/1000.0, q_mvar=bus.q_load_kvar/1000.0, name=f"Load {bus.name}")
+            p_load_mw = bus.p_load_kw / 1000.0 if bus.p_load_enabled else 0.0
+            q_load_mvar = bus.q_load_kvar / 1000.0 if bus.q_load_enabled else 0.0
+
+            if p_load_mw != 0 or q_load_mvar != 0:
+                pp.create_load(self.net, bus=idx, p_mw=p_load_mw, q_mvar=q_load_mvar, name=f"Load {bus.name}")
 
         for line_id, line in state.lines.items():
             from_idx = self.bus_mapping[line.from_bus]
             to_idx = self.bus_mapping[line.to_bus]
-            pp.create_line_from_parameters(self.net, from_bus=from_idx, to_bus=to_idx,
-                                           length_km=line.length_km,
-                                           r_ohm_per_km=line.r_ohm_per_km,
-                                           x_ohm_per_km=line.x_ohm_per_km,
-                                           c_nf_per_km=line.c_nf_per_km,
-                                           max_i_ka=line.max_i_ka,
-                                           name=f"Line {line_id}")
+            if line.is_transformer:
+                # We assume generic parameters for the transformer
+                # from_bus is HV side, to_bus is LV side
+                vn_hv_kv = self.net.bus.at[from_idx, 'vn_kv']
+                vn_lv_kv = self.net.bus.at[to_idx, 'vn_kv']
+                sn_mva = 5.0 # default sn_mva
+                vk_percent = 5.0
+                vkr_percent = 1.0
+                pfe_kw = 10.0
+                i0_percent = 0.5
+                pp.create_transformer_from_parameters(self.net, hv_bus=from_idx, lv_bus=to_idx,
+                                                      sn_mva=sn_mva, vn_hv_kv=vn_hv_kv, vn_lv_kv=vn_lv_kv,
+                                                      vk_percent=vk_percent, vkr_percent=vkr_percent,
+                                                      pfe_kw=pfe_kw, i0_percent=i0_percent,
+                                                      name=f"Trafo {line_id}")
+            else:
+                pp.create_line_from_parameters(self.net, from_bus=from_idx, to_bus=to_idx,
+                                               length_km=line.length_km,
+                                               r_ohm_per_km=line.r_ohm_per_km,
+                                               x_ohm_per_km=line.x_ohm_per_km,
+                                               c_nf_per_km=line.c_nf_per_km,
+                                               max_i_ka=line.max_i_ka,
+                                               name=f"Line {line_id}")
 
     def run_power_flow(self):
         try:

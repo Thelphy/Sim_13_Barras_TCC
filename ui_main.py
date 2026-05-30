@@ -73,6 +73,7 @@ class MainWindowUI(QMainWindow):
         self.main_layout.addWidget(self.tabs)
 
         self.setup_tab1()
+        self.setup_tab_params()
         self.setup_tab2()
         self.setup_tab3()
 
@@ -97,6 +98,35 @@ class MainWindowUI(QMainWindow):
 
         layout.addLayout(control_panel)
         self.tabs.addTab(self.tab1, "Principal (Diagrama)")
+
+    def setup_tab_params(self):
+        self.tab_params = QWidget()
+        layout = QVBoxLayout(self.tab_params)
+
+        splitter = QSplitter(Qt.Orientation.Vertical)
+
+        # Top half: Buses
+        top_widget = QWidget()
+        top_layout = QVBoxLayout(top_widget)
+        top_layout.addWidget(QLabel("Parâmetros das Barras"))
+        self.table_params_buses = QTableWidget()
+        top_layout.addWidget(self.table_params_buses)
+
+        # Bottom half: Lines
+        bottom_widget = QWidget()
+        bottom_layout = QVBoxLayout(bottom_widget)
+        bottom_layout.addWidget(QLabel("Parâmetros das Linhas"))
+        self.table_params_lines = QTableWidget()
+        bottom_layout.addWidget(self.table_params_lines)
+
+        splitter.addWidget(top_widget)
+        splitter.addWidget(bottom_widget)
+        layout.addWidget(splitter)
+
+        self.btn_save_params = QPushButton("Salvar Alterações")
+        layout.addWidget(self.btn_save_params)
+
+        self.tabs.addTab(self.tab_params, "Parâmetros")
 
     def setup_tab2(self):
         self.tab2 = QWidget()
