@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 @dataclass
 class BusData:
@@ -11,6 +11,9 @@ class BusData:
     q_load_kvar: float = 0.0
     p_gen_kw: float = 0.0
     v_target_pu: float = 1.0
+    gen_enabled: bool = True
+    p_load_enabled: bool = True
+    q_load_enabled: bool = True
 
 @dataclass
 class LineData:
@@ -22,6 +25,7 @@ class LineData:
     x_ohm_per_km: float
     c_nf_per_km: float = 10.0
     max_i_ka: float = 1.0
+    is_transformer: bool = False
 
 @dataclass
 class SystemState:
