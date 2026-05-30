@@ -49,6 +49,10 @@ class PVPlotWidget(QWidget):
 
         self.canvas.draw()
 
+
+    def export_plot(self, filename):
+        self.figure.savefig(filename, bbox_inches='tight')
+
 def populate_table(table_widget: QTableWidget, data: list, headers: list):
     table_widget.clear()
     table_widget.setRowCount(len(data))

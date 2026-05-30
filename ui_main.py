@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QTabWidget, QPushButton, QComboBox, QLabel,
                              QTableWidget, QSplitter, QGraphicsDropShadowEffect)
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QSettings, pyqtSignal
 from diagram_view import NetworkDiagram
 from plot_utils import PVPlotWidget
 
@@ -112,10 +112,22 @@ class ToastNotification(QWidget):
         self.timer.start(duration)
 
 class MainWindowUI(QMainWindow):
+    app_closed = pyqtSignal()
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Simulador SEP - 13 Barras")
         self.resize(1000, 700)
+
+        # Load window geometry
+        settings = QSettings("SimuladorSEP", "App")
+        geom = settings.value("geometry")
+        if geom:
+            self.restoreGeometry(geom)
+        state = settings.value("windowState")
+        if state:
+            self.restoreState(state)
+
         self.setStyleSheet(DARK_STYLE)
 
         self.central_widget = QWidget()
@@ -131,6 +143,14 @@ class MainWindowUI(QMainWindow):
         self.setup_tab3()
 
         self.toast = ToastNotification(self)
+
+
+    def closeEvent(self, event):
+        settings = QSettings("SimuladorSEP", "App")
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+        self.app_closed.emit()
+        super().closeEvent(event)
 
     def setup_tab1(self):
         self.tab1 = QWidget()
@@ -218,6 +238,9 @@ class MainWindowUI(QMainWindow):
         splitter.addWidget(bottom_widget)
         layout.addWidget(splitter)
 
+        self.btn_export_results = QPushButton("Exportar Resultados (CSV)")
+        layout.addWidget(self.btn_export_results)
+
         self.tabs.addTab(self.tab2, "Resultados")
 
     def setup_tab3(self):
@@ -225,4 +248,8 @@ class MainWindowUI(QMainWindow):
         layout = QVBoxLayout(self.tab3)
         self.pv_plot = PVPlotWidget()
         layout.addWidget(self.pv_plot)
+
+        self.btn_export_plot = QPushButton("Exportar Gráfico (PNG/JPG)")
+        layout.addWidget(self.btn_export_plot)
+
         self.tabs.addTab(self.tab3, "Gráficos")
