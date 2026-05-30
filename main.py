@@ -90,7 +90,6 @@ class MainController:
     def on_diagram_data_updated(self):
         self.update_diagram()
         self.populate_params_tables()
-        self.run_simulation()
 
     def populate_params_tables(self):
         # Populate Buses
@@ -133,7 +132,6 @@ class MainController:
 
             self.update_diagram()
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros salvos com sucesso!")
-            self.run_simulation()
         except ValueError:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
 
@@ -200,7 +198,6 @@ class MainController:
             self.populate_params_tables()
             self.update_diagram()
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros importados com sucesso!")
-            self.run_simulation()
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao importar: {str(e)}")
 
@@ -228,8 +225,10 @@ class MainController:
         self.ui.btn_simulate.setText("Iniciar Simulação")
 
         if not results.success:
-            QMessageBox.critical(self.ui, "Erro", "A simulação (fluxo de potência) divergiu ou falhou.")
+            self.ui.toast.show_toast("Erro: A simulação falhou.", False, self.ui)
             return
+
+        self.ui.toast.show_toast("Simulação concluída com sucesso!", True, self.ui)
 
         # Update UI Tables
         bus_headers = ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
@@ -249,9 +248,6 @@ class MainController:
 
         # Update Plot
         self.ui.pv_plot.plot_curve(results.pv_curve_p, results.pv_curve_v)
-
-        # Switch focus to results tab
-        self.ui.tabs.setCurrentIndex(1)
 
     def run(self):
         self.ui.show()
