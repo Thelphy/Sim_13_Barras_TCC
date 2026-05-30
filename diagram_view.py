@@ -35,6 +35,39 @@ class BusCheckboxDialog(QDialog):
         self.bus.q_load_enabled = self.chk_q_load.isChecked()
         self.accept()
 
+class LineDialog(QDialog):
+    def __init__(self, line: LineData, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Edit Line: {line.id}")
+        self.line = line
+        self.layout = QVBoxLayout(self)
+
+        self.r_edit = QLineEdit(str(line.r_ohm_per_km))
+        self.x_edit = QLineEdit(str(line.x_ohm_per_km))
+        self.length_edit = QLineEdit(str(line.length_km))
+
+        self.layout.addWidget(self.chk_gen)
+        self.layout.addWidget(self.chk_p_load)
+        self.layout.addWidget(self.chk_q_load)
+
+        save_btn = QPushButton("Aplicar")
+        save_btn.clicked.connect(self.save_data)
+        self.layout.addWidget(save_btn)
+
+    def save_data(self):
+        try:
+            r = float(self.r_edit.text())
+            x = float(self.x_edit.text())
+            length = float(self.length_edit.text())
+            if r < 0 or x < 0 or length < 0:
+                raise ValueError("Values must be non-negative.")
+            self.line.r_ohm_per_km = r
+            self.line.x_ohm_per_km = x
+            self.line.length_km = length
+            self.accept()
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
+
 class GraphBusItem(QGraphicsEllipseItem):
     def __init__(self, x, y, radius, bus: BusData, diagram_view):
         super().__init__(x - radius, y - radius, radius * 2, radius * 2)
