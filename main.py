@@ -1,5 +1,6 @@
 import sys
 import csv
+import math
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDialog
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
@@ -7,6 +8,12 @@ from data_models import SystemState, BusData, LineData
 from ui_main import MainWindowUI
 from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
+
+def safe_float(val_str):
+    v = float(val_str)
+    if not math.isfinite(v):
+        raise ValueError(f"Value '{val_str}' is not a finite float.")
+    return v
 
 class SimulationThread(QThread):
     finished = pyqtSignal(object)
@@ -113,16 +120,16 @@ class MainController:
             for i in range(self.ui.table_params_buses.rowCount()):
                 bus_id = int(self.ui.table_params_buses.item(i, 0).text())
                 if bus_id in self.state.buses:
-                    self.state.buses[bus_id].p_load_kw = float(self.ui.table_params_buses.item(i, 1).text())
-                    self.state.buses[bus_id].q_load_kvar = float(self.ui.table_params_buses.item(i, 2).text())
-                    self.state.buses[bus_id].p_gen_kw = float(self.ui.table_params_buses.item(i, 3).text())
+                    self.state.buses[bus_id].p_load_kw = safe_float(self.ui.table_params_buses.item(i, 1).text())
+                    self.state.buses[bus_id].q_load_kvar = safe_float(self.ui.table_params_buses.item(i, 2).text())
+                    self.state.buses[bus_id].p_gen_kw = safe_float(self.ui.table_params_buses.item(i, 3).text())
 
             for i in range(self.ui.table_params_lines.rowCount()):
                 line_id = self.ui.table_params_lines.item(i, 0).data(Qt.ItemDataRole.UserRole)
                 if line_id in self.state.lines:
-                    self.state.lines[line_id].r_ohm_per_km = float(self.ui.table_params_lines.item(i, 1).text())
-                    self.state.lines[line_id].x_ohm_per_km = float(self.ui.table_params_lines.item(i, 2).text())
-                    self.state.lines[line_id].length_km = float(self.ui.table_params_lines.item(i, 3).text())
+                    self.state.lines[line_id].r_ohm_per_km = safe_float(self.ui.table_params_lines.item(i, 1).text())
+                    self.state.lines[line_id].x_ohm_per_km = safe_float(self.ui.table_params_lines.item(i, 2).text())
+                    self.state.lines[line_id].length_km = safe_float(self.ui.table_params_lines.item(i, 3).text())
 
             self.update_diagram()
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros salvos com sucesso!")
@@ -180,15 +187,15 @@ class MainController:
                     if mode == "buses":
                         bus_id = int(row[0])
                         if bus_id in self.state.buses:
-                            self.state.buses[bus_id].p_load_kw = float(row[1])
-                            self.state.buses[bus_id].q_load_kvar = float(row[2])
-                            self.state.buses[bus_id].p_gen_kw = float(row[3])
+                            self.state.buses[bus_id].p_load_kw = safe_float(row[1])
+                            self.state.buses[bus_id].q_load_kvar = safe_float(row[2])
+                            self.state.buses[bus_id].p_gen_kw = safe_float(row[3])
                     elif mode == "lines":
                         line_id = int(row[0])
                         if line_id in self.state.lines:
-                            self.state.lines[line_id].r_ohm_per_km = float(row[1])
-                            self.state.lines[line_id].x_ohm_per_km = float(row[2])
-                            self.state.lines[line_id].length_km = float(row[3])
+                            self.state.lines[line_id].r_ohm_per_km = safe_float(row[1])
+                            self.state.lines[line_id].x_ohm_per_km = safe_float(row[2])
+                            self.state.lines[line_id].length_km = safe_float(row[3])
 
             self.populate_params_tables()
             self.update_diagram()
