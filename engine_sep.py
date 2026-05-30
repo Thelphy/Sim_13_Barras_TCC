@@ -67,27 +67,28 @@ class PowerSystemEngine:
             self.results.success = True
 
             # Extract Bus Results
+            bus_names = self.net.bus['name'].values
+            vm_pus = self.net.res_bus['vm_pu'].values
+            va_degs = self.net.res_bus['va_degree'].values
+            p_mws = self.net.res_bus['p_mw'].values
+            q_mvars = self.net.res_bus['q_mvar'].values
+
             bus_res = []
-            for idx, row in self.net.res_bus.iterrows():
-                bus_name = self.net.bus.loc[idx, 'name']
-                v_pu = row['vm_pu']
-                va_deg = row['va_degree']
-                p_mw = row['p_mw']
-                q_mvar = row['q_mvar']
+            for bus_name, v_pu, va_deg, p_mw, q_mvar in zip(bus_names, vm_pus, va_degs, p_mws, q_mvars):
                 bus_res.append([bus_name, f"{v_pu:.4f}", f"{va_deg:.2f}", f"{p_mw:.2f}", f"{q_mvar:.2f}"])
             self.results.bus_results = bus_res
 
             # Extract Line Results
+            line_names = self.net.line['name'].values
+            p_from_mws = self.net.res_line['p_from_mw'].values
+            q_from_mvars = self.net.res_line['q_from_mvar'].values
+            p_to_mws = self.net.res_line['p_to_mw'].values
+            q_to_mvars = self.net.res_line['q_to_mvar'].values
+            pl_mws = self.net.res_line['pl_mw'].values
+            loadings = self.net.res_line['loading_percent'].values
+
             line_res = []
-            for idx, row in self.net.res_line.iterrows():
-                line_name = self.net.line.loc[idx, 'name']
-                p_from_mw = row['p_from_mw']
-                q_from_mvar = row['q_from_mvar']
-                p_to_mw = row['p_to_mw']
-                q_to_mvar = row['q_to_mvar']
-                pl_mw = row['pl_mw']
-                ql_mvar = row['ql_mvar']
-                loading = row['loading_percent']
+            for line_name, p_from_mw, q_from_mvar, p_to_mw, q_to_mvar, pl_mw, loading in zip(line_names, p_from_mws, q_from_mvars, p_to_mws, q_to_mvars, pl_mws, loadings):
                 line_res.append([line_name, f"{p_from_mw:.2f}", f"{q_from_mvar:.2f}", f"{p_to_mw:.2f}", f"{q_to_mvar:.2f}", f"{pl_mw:.4f}", f"{loading:.2f}"])
             self.results.line_results = line_res
 
