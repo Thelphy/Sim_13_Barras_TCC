@@ -91,9 +91,12 @@ class PowerSystemEngine:
                 line_res.append([line_name, f"{p_from_mw:.2f}", f"{q_from_mvar:.2f}", f"{p_to_mw:.2f}", f"{q_to_mvar:.2f}", f"{pl_mw:.4f}", f"{loading:.2f}"])
             self.results.line_results = line_res
 
-        except Exception as e:
+        except pp.powerflow.LoadflowNotConverged:
             self.results.success = False
-            print(f"Power flow failed: {e}")
+            print("Power flow failed: Loadflow did not converge.")
+        except Exception:
+            self.results.success = False
+            print("Power flow failed: An unexpected error occurred.")
 
     def run_modal_analysis(self):
         # Simplistic Modal Analysis using Newton-Raphson Jacobian (J_R)
@@ -145,8 +148,8 @@ class PowerSystemEngine:
                         participation = participation / np.sum(participation)
 
                     self.results.participation_factors = {self.net.bus.loc[pq_buses[i], 'name']: p for i, p in enumerate(participation)}
-        except Exception as e:
-            print(f"Modal analysis failed: {e}")
+        except Exception:
+            print("Modal analysis failed: An unexpected error occurred.")
 
     def generate_pv_curve(self, target_bus_name: str):
         if not self.results.success:
