@@ -34,6 +34,18 @@ def test_run_power_flow_generic_exception(capsys):
     assert "Secret generic error" not in captured.out
     assert not engine.results.success
 
+def test_run_power_flow_error_path():
+    engine = PowerSystemEngine()
+    state = SystemState()
+    engine.build_network(state)
+
+    # Mock pp.runpp to raise an exception as per the issue rationale
+    with patch('pandapower.runpp', side_effect=Exception("Mocked error")):
+        engine.run_power_flow()
+
+    # Checking that self.results.success is set to False
+    assert not engine.results.success
+
 def test_run_modal_analysis_generic_exception(capsys):
     engine = PowerSystemEngine()
     engine.results.success = True  # Bypass early return
