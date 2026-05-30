@@ -1,8 +1,9 @@
 import sys
 import csv
 import math
+import json
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDialog
-from PyQt6.QtCore import QThread, pyqtSignal, Qt
+from PyQt6.QtCore import QThread, pyqtSignal, Qt, QSettings
 
 from data_models import SystemState, BusData, LineData
 from ui_main import MainWindowUI
@@ -39,11 +40,66 @@ class MainController:
         self.state = SystemState()
 
         self.init_default_data()
+        self.load_settings()
         self.setup_connections()
 
         # Initial draw
         self.update_diagram()
+        self.populate_params_tables()
         self.populate_target_combo()
+
+
+    def save_settings(self):
+        settings = QSettings("SimuladorSEP", "Parametros")
+
+        # Save buses
+        buses_data = {}
+        for bus_id, bus in self.state.buses.items():
+            buses_data[bus_id] = {
+                "p_load_kw": bus.p_load_kw,
+                "q_load_kvar": bus.q_load_kvar,
+                "p_gen_kw": bus.p_gen_kw
+            }
+        settings.setValue("buses", json.dumps(buses_data))
+
+        # Save lines
+        lines_data = {}
+        for line_id, line in self.state.lines.items():
+            lines_data[line_id] = {
+                "r_ohm_per_km": line.r_ohm_per_km,
+                "x_ohm_per_km": line.x_ohm_per_km,
+                "length_km": line.length_km
+            }
+        settings.setValue("lines", json.dumps(lines_data))
+
+    def load_settings(self):
+        settings = QSettings("SimuladorSEP", "Parametros")
+
+        buses_str = settings.value("buses", "")
+        if buses_str:
+            try:
+                buses_data = json.loads(buses_str)
+                for bus_id_str, data in buses_data.items():
+                    bus_id = int(bus_id_str)
+                    if bus_id in self.state.buses:
+                        self.state.buses[bus_id].p_load_kw = float(data.get("p_load_kw", self.state.buses[bus_id].p_load_kw))
+                        self.state.buses[bus_id].q_load_kvar = float(data.get("q_load_kvar", self.state.buses[bus_id].q_load_kvar))
+                        self.state.buses[bus_id].p_gen_kw = float(data.get("p_gen_kw", self.state.buses[bus_id].p_gen_kw))
+            except Exception as e:
+                print("Erro ao carregar parâmetros de barras:", e)
+
+        lines_str = settings.value("lines", "")
+        if lines_str:
+            try:
+                lines_data = json.loads(lines_str)
+                for line_id_str, data in lines_data.items():
+                    line_id = int(line_id_str)
+                    if line_id in self.state.lines:
+                        self.state.lines[line_id].r_ohm_per_km = float(data.get("r_ohm_per_km", self.state.lines[line_id].r_ohm_per_km))
+                        self.state.lines[line_id].x_ohm_per_km = float(data.get("x_ohm_per_km", self.state.lines[line_id].x_ohm_per_km))
+                        self.state.lines[line_id].length_km = float(data.get("length_km", self.state.lines[line_id].length_km))
+            except Exception as e:
+                print("Erro ao carregar parâmetros de linhas:", e)
 
     def init_default_data(self):
         # 13 Bus system based on IEEE 13 Node Test Feeder layout
@@ -84,6 +140,9 @@ class MainController:
         self.ui.btn_save_params.clicked.connect(self.save_params)
         self.ui.btn_export_params.clicked.connect(self.export_params)
         self.ui.btn_import_params.clicked.connect(self.import_params)
+        self.ui.btn_export_results.clicked.connect(self.export_results)
+        self.ui.btn_export_plot.clicked.connect(self.export_plot)
+        self.ui.app_closed.connect(self.save_settings)
 
     def on_diagram_data_updated(self):
         self.update_diagram()
@@ -129,6 +188,7 @@ class MainController:
                     self.state.lines[line_id].length_km = safe_float(self.ui.table_params_lines.item(i, 3).text())
 
             self.update_diagram()
+            self.save_settings()
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros salvos com sucesso!")
         except ValueError:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
@@ -195,9 +255,80 @@ class MainController:
 
             self.populate_params_tables()
             self.update_diagram()
+            self.save_settings()
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros importados com sucesso!")
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao importar: {str(e)}")
+
+
+
+    def export_plot(self):
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Gráfico", "", "Images (*.png *.jpg *.jpeg)")
+        if not filename:
+            return
+
+        try:
+            self.ui.pv_plot.export_plot(filename)
+            QMessageBox.information(self.ui, "Sucesso", "Gráfico exportado com sucesso!")
+        except Exception as e:
+            QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
+
+    def export_results(self):
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Resultados", "", "CSV Files (*.csv)")
+        if not filename:
+            return
+
+        try:
+            with open(filename, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+
+                # Export Bus Results
+                writer.writerow(["[Fluxo de Potência (Tensões Nodais)]"])
+                headers = []
+                for j in range(self.ui.table_bus_results.columnCount()):
+                    headers.append(self.ui.table_bus_results.horizontalHeaderItem(j).text())
+                writer.writerow(headers)
+
+                for i in range(self.ui.table_bus_results.rowCount()):
+                    row_data = []
+                    for j in range(self.ui.table_bus_results.columnCount()):
+                        item = self.ui.table_bus_results.item(i, j)
+                        row_data.append(item.text() if item else "")
+                    writer.writerow(row_data)
+                writer.writerow([])
+
+                # Export Line Results
+                writer.writerow(["[Fluxo nas Linhas]"])
+                headers = []
+                for j in range(self.ui.table_line_results.columnCount()):
+                    headers.append(self.ui.table_line_results.horizontalHeaderItem(j).text())
+                writer.writerow(headers)
+
+                for i in range(self.ui.table_line_results.rowCount()):
+                    row_data = []
+                    for j in range(self.ui.table_line_results.columnCount()):
+                        item = self.ui.table_line_results.item(i, j)
+                        row_data.append(item.text() if item else "")
+                    writer.writerow(row_data)
+                writer.writerow([])
+
+                # Export Modal Analysis Results
+                writer.writerow(["[Análise Modal]"])
+                headers = []
+                for j in range(self.ui.table_modal_results.columnCount()):
+                    headers.append(self.ui.table_modal_results.horizontalHeaderItem(j).text())
+                writer.writerow(headers)
+
+                for i in range(self.ui.table_modal_results.rowCount()):
+                    row_data = []
+                    for j in range(self.ui.table_modal_results.columnCount()):
+                        item = self.ui.table_modal_results.item(i, j)
+                        row_data.append(item.text() if item else "")
+                    writer.writerow(row_data)
+
+            QMessageBox.information(self.ui, "Sucesso", "Resultados exportados com sucesso!")
+        except Exception as e:
+            QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
     def populate_target_combo(self):
         self.ui.combo_target_bus.clear()
