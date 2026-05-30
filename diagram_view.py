@@ -60,12 +60,17 @@ class LineDialog(QDialog):
 
     def save_data(self):
         try:
-            self.line.r_ohm_per_km = float(self.r_edit.text())
-            self.line.x_ohm_per_km = float(self.x_edit.text())
-            self.line.length_km = float(self.length_edit.text())
+            r = float(self.r_edit.text())
+            x = float(self.x_edit.text())
+            length = float(self.length_edit.text())
+            if r < 0 or x < 0 or length < 0:
+                raise ValueError("Values must be non-negative.")
+            self.line.r_ohm_per_km = r
+            self.line.x_ohm_per_km = x
+            self.line.length_km = length
             self.accept()
         except ValueError:
-            QMessageBox.warning(self, "Invalid Input", "Please enter numeric values.")
+            QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
 
 class GraphBusItem(QGraphicsEllipseItem):
     def __init__(self, x, y, radius, bus: BusData, diagram_view):
