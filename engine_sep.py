@@ -177,7 +177,10 @@ class PowerSystemEngine:
                 if len(real_eigenvalues) > 0:
                     min_eig_idx = 0
                     right_eigenvector = eigenvectors[:, min_eig_idx]
-                    left_eigenvector = np.linalg.inv(eigenvectors)[min_eig_idx, :]
+
+                    e0 = np.zeros(eigenvectors.shape[0])
+                    e0[min_eig_idx] = 1.0
+                    left_eigenvector = np.linalg.solve(eigenvectors.T, e0)
 
                     participation = np.abs(right_eigenvector * left_eigenvector)
                     # Normalize
