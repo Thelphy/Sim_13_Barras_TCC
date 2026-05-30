@@ -21,7 +21,7 @@ def test_main_init_default_data(mock_qapp, mock_ui):
     assert 650 in controller.state.buses
     assert controller.state.buses[650].name == "650 (Slack)"
     assert controller.state.buses[650].type == "slack"
-    assert controller.state.buses[650].vn_kv == 115.0
+    assert controller.state.buses[650].vn_kv == 4.16
 
     assert 634 in controller.state.buses
     assert controller.state.buses[634].vn_kv == 0.48
@@ -32,7 +32,7 @@ def test_main_init_default_data(mock_qapp, mock_ui):
 
     # 3. Check some specific keys and values for Lines
     assert 1 in controller.state.lines
-    assert controller.state.lines[1].is_transformer is True
+    assert controller.state.lines[1].is_transformer is False
     assert controller.state.lines[1].from_bus == 650
     assert controller.state.lines[1].to_bus == 632
 

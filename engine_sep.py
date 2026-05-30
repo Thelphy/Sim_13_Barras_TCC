@@ -54,11 +54,20 @@ class PowerSystemEngine:
                     vn_hv_kv = vn_to
                     vn_lv_kv = vn_from
 
-                sn_mva = 5.0 # default sn_mva
-                vk_percent = 5.0
-                vkr_percent = 1.0
-                pfe_kw = 10.0
-                i0_percent = 0.5
+                # Specific parameters for 633-634 500 kVA transformer (4.16/0.48 kV)
+                if vn_hv_kv == 4.16 and vn_lv_kv == 0.48:
+                    sn_mva = 0.5
+                    vk_percent = 2.0
+                    vkr_percent = 0.5
+                    pfe_kw = 1.0
+                    i0_percent = 0.5
+                else:
+                    sn_mva = 5.0 # default sn_mva
+                    vk_percent = 5.0
+                    vkr_percent = 1.0
+                    pfe_kw = 10.0
+                    i0_percent = 0.5
+
                 pp.create_transformer_from_parameters(self.net, hv_bus=hv_bus, lv_bus=lv_bus,
                                                       sn_mva=sn_mva, vn_hv_kv=vn_hv_kv, vn_lv_kv=vn_lv_kv,
                                                       vk_percent=vk_percent, vkr_percent=vkr_percent,
@@ -102,6 +111,20 @@ class PowerSystemEngine:
             line_res = []
             for line_name, p_from_mw, q_from_mvar, p_to_mw, q_to_mvar, pl_mw, loading in zip(line_names, p_from_mws, q_from_mvars, p_to_mws, q_to_mvars, pl_mws, loadings):
                 line_res.append([line_name, f"{p_from_mw:.2f}", f"{q_from_mvar:.2f}", f"{p_to_mw:.2f}", f"{q_to_mvar:.2f}", f"{pl_mw:.4f}", f"{loading:.2f}"])
+
+            # Extract Transformer Results (append to line_res)
+            if not self.net.trafo.empty:
+                trafo_names = self.net.trafo['name'].values
+                p_from_mws_t = self.net.res_trafo['p_hv_mw'].values
+                q_from_mvars_t = self.net.res_trafo['q_hv_mvar'].values
+                p_to_mws_t = self.net.res_trafo['p_lv_mw'].values
+                q_to_mvars_t = self.net.res_trafo['q_lv_mvar'].values
+                pl_mws_t = self.net.res_trafo['pl_mw'].values
+                loadings_t = self.net.res_trafo['loading_percent'].values
+
+                for t_name, p_from_mw, q_from_mvar, p_to_mw, q_to_mvar, pl_mw, loading in zip(trafo_names, p_from_mws_t, q_from_mvars_t, p_to_mws_t, q_to_mvars_t, pl_mws_t, loadings_t):
+                    line_res.append([t_name, f"{p_from_mw:.2f}", f"{q_from_mvar:.2f}", f"{p_to_mw:.2f}", f"{q_to_mvar:.2f}", f"{pl_mw:.4f}", f"{loading:.2f}"])
+
             self.results.line_results = line_res
 
         except pp.powerflow.LoadflowNotConverged:
@@ -112,34 +135,35 @@ class PowerSystemEngine:
             print("Power flow failed: An unexpected error occurred.")
 
     def run_modal_analysis(self):
-        # Simplistic Modal Analysis using Newton-Raphson Jacobian (J_R)
-        # Note: pandapower does not directly expose the full analytical Jacobian from newtonpf
-        # This is a simplified approach or we can compute an approximate reduced Jacobian.
+        # Modal Analysis using Newton-Raphson Jacobian (J_R)
         if not self.results.success:
             return
 
         try:
-            # We get Ybus from pandapower internal components
-            Ybus = self.net._ppc['internal']['Ybus']
+            ppc = self.net._ppc
+            if 'J' not in ppc['internal']:
+                return
 
-            # As a proxy for stability, we will just look at eigenvalues of the Ybus matrix's magnitude
-            # A rigorous modal analysis requires dQ/dV reduced Jacobian (J_R).
-            # For the sake of this code, we compute a simplified reduced Jacobian.
+            J = ppc['internal']['J'].toarray()
 
-            pq_buses = self.net.bus[self.net.bus.type == 'b'].index
-            n_pq = len(pq_buses)
+            from pandapower.pypower.bustypes import bustypes
+            ref, pv, pq = bustypes(ppc['bus'], ppc['gen'])
+
+            n_pq = len(pq)
+            n_npv = len(pq) + len(pv)
 
             if n_pq > 0:
-                # We can approximate J_R using imaginary part of Ybus for PQ buses
-                # J_R ≈ -B_reduced (where B is susceptance)
-                # This is a classic approximation in power systems.
-                Y_reduced = Ybus[np.ix_(pq_buses, pq_buses)]
-                B_reduced = Y_reduced.imag
+                # Submatrices of the full Jacobian J
+                J11 = J[:n_npv, :n_npv]
+                J12 = J[:n_npv, n_npv:]
+                J21 = J[n_npv:, :n_npv]
+                J22 = J[n_npv:, n_npv:]
 
-                # J_R approx -B
-                J_R = -B_reduced.toarray()
+                # Reduced Jacobian JR = J22 - J21 * inv(J11) * J12
+                J11_inv = np.linalg.inv(J11)
+                JR = J22 - J21.dot(J11_inv).dot(J12)
 
-                eigenvalues, eigenvectors = eig(J_R)
+                eigenvalues, eigenvectors = eig(JR)
                 real_eigenvalues = eigenvalues.real
 
                 # Sort ascending
@@ -160,7 +184,16 @@ class PowerSystemEngine:
                     if np.sum(participation) > 0:
                         participation = participation / np.sum(participation)
 
-                    self.results.participation_factors = {self.net.bus.loc[pq_buses[i], 'name']: p for i, p in enumerate(participation)}
+                    bus_lookup = self.net._pd2ppc_lookups["bus"]
+
+                    part_factors = {}
+                    for i, p in enumerate(participation):
+                        ppc_bus_idx = pq[i]
+                        net_bus_idx = np.where(bus_lookup == ppc_bus_idx)[0][0]
+                        bus_name = self.net.bus.loc[net_bus_idx, 'name']
+                        part_factors[bus_name] = p
+
+                    self.results.participation_factors = part_factors
         except Exception:
             print("Modal analysis failed: An unexpected error occurred.")
 
@@ -177,7 +210,9 @@ class PowerSystemEngine:
         # Check if there is load at this bus
         load_idx = self.net.load[self.net.load.bus == target_bus_idx].index
         if len(load_idx) == 0:
-            return
+            # Create a small base load to allow scaling
+            created_load_idx = pp.create_load(self.net, bus=target_bus_idx, p_mw=0.01, q_mvar=0.0, name=f"Load {target_bus_name}")
+            load_idx = [created_load_idx]
         load_idx = load_idx[0]
 
         base_p = self.net.load.loc[load_idx, 'p_mw']
