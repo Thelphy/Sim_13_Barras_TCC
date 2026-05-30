@@ -1,6 +1,7 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem
-from PyQt6.QtCore import QThread, pyqtSignal
+import csv
+from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDialog
+from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
 from data_models import SystemState, BusData, LineData
 from ui_main import MainWindowUI
@@ -76,6 +77,8 @@ class MainController:
         self.ui.btn_simulate.clicked.connect(self.run_simulation)
         self.ui.diagram_view.data_updated.connect(self.on_diagram_data_updated)
         self.ui.btn_save_params.clicked.connect(self.save_params)
+        self.ui.btn_export_params.clicked.connect(self.export_params)
+        self.ui.btn_import_params.clicked.connect(self.import_params)
 
     def on_diagram_data_updated(self):
         self.update_diagram()
@@ -98,7 +101,9 @@ class MainController:
         self.ui.table_params_lines.setColumnCount(4)
         self.ui.table_params_lines.setHorizontalHeaderLabels(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
         for i, (line_id, line) in enumerate(self.state.lines.items()):
-            self.ui.table_params_lines.setItem(i, 0, QTableWidgetItem(str(line.id)))
+            item = QTableWidgetItem(f"{line.from_bus} - {line.to_bus}")
+            item.setData(Qt.ItemDataRole.UserRole, line.id)
+            self.ui.table_params_lines.setItem(i, 0, item)
             self.ui.table_params_lines.setItem(i, 1, QTableWidgetItem(str(line.r_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 2, QTableWidgetItem(str(line.x_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 3, QTableWidgetItem(str(line.length_km)))
@@ -113,7 +118,7 @@ class MainController:
                     self.state.buses[bus_id].p_gen_kw = float(self.ui.table_params_buses.item(i, 3).text())
 
             for i in range(self.ui.table_params_lines.rowCount()):
-                line_id = int(self.ui.table_params_lines.item(i, 0).text())
+                line_id = self.ui.table_params_lines.item(i, 0).data(Qt.ItemDataRole.UserRole)
                 if line_id in self.state.lines:
                     self.state.lines[line_id].r_ohm_per_km = float(self.ui.table_params_lines.item(i, 1).text())
                     self.state.lines[line_id].x_ohm_per_km = float(self.ui.table_params_lines.item(i, 2).text())
@@ -124,6 +129,73 @@ class MainController:
             self.run_simulation()
         except ValueError:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
+
+    def export_params(self):
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Parâmetros", "", "CSV Files (*.csv)")
+        if not filename:
+            return
+
+        try:
+            with open(filename, mode='w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+
+                writer.writerow(["[Buses]"])
+                writer.writerow(["ID", "P Load (kW)", "Q Load (kVAr)", "Geração (kW)"])
+                for bus_id, bus in self.state.buses.items():
+                    writer.writerow([bus_id, bus.p_load_kw, bus.q_load_kvar, bus.p_gen_kw])
+
+                writer.writerow([])
+                writer.writerow(["[Lines]"])
+                writer.writerow(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
+                for line_id, line in self.state.lines.items():
+                    writer.writerow([line.id, line.r_ohm_per_km, line.x_ohm_per_km, line.length_km])
+
+            QMessageBox.information(self.ui, "Sucesso", "Parâmetros exportados com sucesso!")
+        except Exception as e:
+            QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
+
+    def import_params(self):
+        filename, _ = QFileDialog.getOpenFileName(self.ui, "Importar Parâmetros", "", "CSV Files (*.csv)")
+        if not filename:
+            return
+
+        try:
+            with open(filename, mode='r', newline='', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                mode = None
+
+                for row in reader:
+                    if not row:
+                        continue
+                    if row[0] == "[Buses]":
+                        mode = "buses"
+                        continue
+                    elif row[0] == "[Lines]":
+                        mode = "lines"
+                        continue
+
+                    if row[0] == "ID":
+                        continue
+
+                    if mode == "buses":
+                        bus_id = int(row[0])
+                        if bus_id in self.state.buses:
+                            self.state.buses[bus_id].p_load_kw = float(row[1])
+                            self.state.buses[bus_id].q_load_kvar = float(row[2])
+                            self.state.buses[bus_id].p_gen_kw = float(row[3])
+                    elif mode == "lines":
+                        line_id = int(row[0])
+                        if line_id in self.state.lines:
+                            self.state.lines[line_id].r_ohm_per_km = float(row[1])
+                            self.state.lines[line_id].x_ohm_per_km = float(row[2])
+                            self.state.lines[line_id].length_km = float(row[3])
+
+            self.populate_params_tables()
+            self.update_diagram()
+            QMessageBox.information(self.ui, "Sucesso", "Parâmetros importados com sucesso!")
+            self.run_simulation()
+        except Exception as e:
+            QMessageBox.critical(self.ui, "Erro", f"Erro ao importar: {str(e)}")
 
     def populate_target_combo(self):
         self.ui.combo_target_bus.clear()
