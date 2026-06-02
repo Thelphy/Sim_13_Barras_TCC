@@ -157,6 +157,7 @@ class MainController:
     def on_diagram_data_updated(self):
         self.update_diagram()
         self.populate_params_tables()
+        self.save_settings()
 
     def populate_params_tables(self):
         # Populate Buses
