@@ -47,9 +47,12 @@ class LineDialog(QDialog):
         self.x_edit = QLineEdit(str(line.x_ohm_per_km))
         self.length_edit = QLineEdit(str(line.length_km))
 
-        self.layout.addWidget(self.chk_gen)
-        self.layout.addWidget(self.chk_p_load)
-        self.layout.addWidget(self.chk_q_load)
+        self.layout.addWidget(QLabel("R (ohm/km):"))
+        self.layout.addWidget(self.r_edit)
+        self.layout.addWidget(QLabel("X (ohm/km):"))
+        self.layout.addWidget(self.x_edit)
+        self.layout.addWidget(QLabel("Length (km):"))
+        self.layout.addWidget(self.length_edit)
 
         save_btn = QPushButton("Aplicar")
         save_btn.clicked.connect(self.save_data)
@@ -65,6 +68,52 @@ class LineDialog(QDialog):
             self.line.r_ohm_per_km = r
             self.line.x_ohm_per_km = x
             self.line.length_km = length
+            self.accept()
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
+
+class TrafoDialog(QDialog):
+    def __init__(self, line: LineData, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Edit Transformer: {line.id}")
+        self.line = line
+        self.layout = QVBoxLayout(self)
+
+        self.sn_edit = QLineEdit(str(line.sn_mva))
+        self.vk_edit = QLineEdit(str(line.vk_percent))
+        self.vkr_edit = QLineEdit(str(line.vkr_percent))
+        self.pfe_edit = QLineEdit(str(line.pfe_kw))
+        self.i0_edit = QLineEdit(str(line.i0_percent))
+
+        self.layout.addWidget(QLabel("Sn (MVA):"))
+        self.layout.addWidget(self.sn_edit)
+        self.layout.addWidget(QLabel("vk (%):"))
+        self.layout.addWidget(self.vk_edit)
+        self.layout.addWidget(QLabel("vkr (%):"))
+        self.layout.addWidget(self.vkr_edit)
+        self.layout.addWidget(QLabel("pfe (kW):"))
+        self.layout.addWidget(self.pfe_edit)
+        self.layout.addWidget(QLabel("i0 (%):"))
+        self.layout.addWidget(self.i0_edit)
+
+        save_btn = QPushButton("Aplicar")
+        save_btn.clicked.connect(self.save_data)
+        self.layout.addWidget(save_btn)
+
+    def save_data(self):
+        try:
+            sn = float(self.sn_edit.text())
+            vk = float(self.vk_edit.text())
+            vkr = float(self.vkr_edit.text())
+            pfe = float(self.pfe_edit.text())
+            i0 = float(self.i0_edit.text())
+            if sn < 0 or vk < 0 or vkr < 0 or pfe < 0 or i0 < 0:
+                raise ValueError("Values must be non-negative.")
+            self.line.sn_mva = sn
+            self.line.vk_percent = vk
+            self.line.vkr_percent = vkr
+            self.line.pfe_kw = pfe
+            self.line.i0_percent = i0
             self.accept()
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
@@ -92,6 +141,11 @@ class GraphLineItem(QGraphicsLineItem):
         pen.setWidth(3)
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
+
+    def mouseDoubleClickEvent(self, event):
+        dialog = LineDialog(self.line_data, self.diagram_view)
+        if dialog.exec():
+            self.diagram_view.data_updated.emit()
 
 class GraphTrafoItem(QGraphicsItemGroup):
     def __init__(self, x1, y1, x2, y2, line: LineData, diagram_view):
@@ -153,6 +207,11 @@ class GraphTrafoItem(QGraphicsItemGroup):
         self.addToGroup(line2)
         self.addToGroup(c1)
         self.addToGroup(c2)
+
+    def mouseDoubleClickEvent(self, event):
+        dialog = TrafoDialog(self.line_data, self.diagram_view)
+        if dialog.exec():
+            self.diagram_view.data_updated.emit()
 
 
 class NetworkDiagram(QGraphicsView):

@@ -54,19 +54,11 @@ class PowerSystemEngine:
                     vn_hv_kv = vn_to
                     vn_lv_kv = vn_from
 
-                # Specific parameters for 633-634 500 kVA transformer (4.16/0.48 kV)
-                if vn_hv_kv == 4.16 and vn_lv_kv == 0.48:
-                    sn_mva = 0.5
-                    vk_percent = 2.0
-                    vkr_percent = 0.5
-                    pfe_kw = 1.0
-                    i0_percent = 0.5
-                else:
-                    sn_mva = 5.0 # default sn_mva
-                    vk_percent = 5.0
-                    vkr_percent = 1.0
-                    pfe_kw = 10.0
-                    i0_percent = 0.5
+                sn_mva = line.sn_mva
+                vk_percent = line.vk_percent
+                vkr_percent = line.vkr_percent
+                pfe_kw = line.pfe_kw
+                i0_percent = line.i0_percent
 
                 pp.create_transformer_from_parameters(self.net, hv_bus=hv_bus, lv_bus=lv_bus,
                                                       sn_mva=sn_mva, vn_hv_kv=vn_hv_kv, vn_lv_kv=vn_lv_kv,
