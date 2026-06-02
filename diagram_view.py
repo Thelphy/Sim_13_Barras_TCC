@@ -6,35 +6,42 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPen, QBrush, QColor
 from data_models import BusData, LineData
 
-from PyQt6.QtWidgets import QCheckBox
 
-class BusCheckboxDialog(QDialog):
+class BusDialog(QDialog):
     def __init__(self, bus: BusData, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Controles: Barra {bus.name}")
+        self.setWindowTitle(f"Editar Barra: {bus.name}")
         self.bus = bus
         self.layout = QVBoxLayout(self)
 
-        self.chk_gen = QCheckBox("Geração (kW)")
-        self.chk_gen.setChecked(bus.gen_enabled)
-        self.chk_p_load = QCheckBox("P Load (kW)")
-        self.chk_p_load.setChecked(bus.p_load_enabled)
-        self.chk_q_load = QCheckBox("Q Load (VAr)")
-        self.chk_q_load.setChecked(bus.q_load_enabled)
+        self.p_load_edit = QLineEdit(str(bus.p_load_kw))
+        self.q_load_edit = QLineEdit(str(bus.q_load_kvar))
+        self.p_gen_edit = QLineEdit(str(bus.p_gen_kw))
 
-        self.layout.addWidget(self.chk_gen)
-        self.layout.addWidget(self.chk_p_load)
-        self.layout.addWidget(self.chk_q_load)
+        self.layout.addWidget(QLabel("P Load (kW):"))
+        self.layout.addWidget(self.p_load_edit)
+        self.layout.addWidget(QLabel("Q Load (kVAr):"))
+        self.layout.addWidget(self.q_load_edit)
+        self.layout.addWidget(QLabel("Geração (kW):"))
+        self.layout.addWidget(self.p_gen_edit)
 
         save_btn = QPushButton("Aplicar")
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
     def save_data(self):
-        self.bus.gen_enabled = self.chk_gen.isChecked()
-        self.bus.p_load_enabled = self.chk_p_load.isChecked()
-        self.bus.q_load_enabled = self.chk_q_load.isChecked()
-        self.accept()
+        try:
+            p_load = float(self.p_load_edit.text())
+            q_load = float(self.q_load_edit.text())
+            p_gen = float(self.p_gen_edit.text())
+
+            self.bus.p_load_kw = p_load
+            self.bus.q_load_kvar = q_load
+            self.bus.p_gen_kw = p_gen
+
+            self.accept()
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Please enter valid numeric values.")
 
 class LineDialog(QDialog):
     def __init__(self, line: LineData, parent=None):
@@ -128,7 +135,7 @@ class GraphBusItem(QGraphicsEllipseItem):
         self.setToolTip(f"{bus.name}\nType: {bus.type}")
 
     def mouseDoubleClickEvent(self, event):
-        dialog = BusCheckboxDialog(self.bus, self.diagram_view)
+        dialog = BusDialog(self.bus, self.diagram_view)
         if dialog.exec():
             self.diagram_view.data_updated.emit()
 
