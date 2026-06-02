@@ -1,8 +1,8 @@
 import sys
-import csv
 import math
 import json
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDialog
+from openpyxl import Workbook, load_workbook
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QSettings
 
 from data_models import SystemState, BusData, LineData
@@ -230,83 +230,84 @@ class MainController:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
 
     def export_params(self):
-        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Parâmetros", "", "CSV Files (*.csv)")
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Parâmetros", "", "Excel Files (*.xlsx)")
         if not filename:
             return
 
         try:
-            with open(filename, mode='w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
+            wb = Workbook()
+            ws = wb.active
 
-                writer.writerow(["[Buses]"])
-                writer.writerow(["ID", "P Load (kW)", "Q Load (kVAr)", "Geração (kW)"])
-                for bus_id, bus in self.state.buses.items():
-                    writer.writerow([bus_id, bus.p_load_kw, bus.q_load_kvar, bus.p_gen_kw])
+            ws.append(["[Buses]"])
+            ws.append(["ID", "P Load (kW)", "Q Load (kVAr)", "Geração (kW)"])
+            for bus_id, bus in self.state.buses.items():
+                ws.append([bus_id, bus.p_load_kw, bus.q_load_kvar, bus.p_gen_kw])
 
-                writer.writerow([])
-                writer.writerow(["[Lines]"])
-                writer.writerow(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
-                for line_id, line in self.state.lines.items():
-                    if not line.is_transformer:
-                        writer.writerow([line.id, line.r_ohm_per_km, line.x_ohm_per_km, line.length_km])
+            ws.append([])
+            ws.append(["[Lines]"])
+            ws.append(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
+            for line_id, line in self.state.lines.items():
+                if not line.is_transformer:
+                    ws.append([line.id, line.r_ohm_per_km, line.x_ohm_per_km, line.length_km])
 
-                writer.writerow([])
-                writer.writerow(["[Transformers]"])
-                writer.writerow(["ID", "Sn (MVA)", "vk (%)", "vkr (%)", "pfe (kW)", "i0 (%)"])
-                for line_id, line in self.state.lines.items():
-                    if line.is_transformer:
-                        writer.writerow([line.id, line.sn_mva, line.vk_percent, line.vkr_percent, line.pfe_kw, line.i0_percent])
+            ws.append([])
+            ws.append(["[Transformers]"])
+            ws.append(["ID", "Sn (MVA)", "vk (%)", "vkr (%)", "pfe (kW)", "i0 (%)"])
+            for line_id, line in self.state.lines.items():
+                if line.is_transformer:
+                    ws.append([line.id, line.sn_mva, line.vk_percent, line.vkr_percent, line.pfe_kw, line.i0_percent])
 
+            wb.save(filename)
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros exportados com sucesso!")
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
     def import_params(self):
-        filename, _ = QFileDialog.getOpenFileName(self.ui, "Importar Parâmetros", "", "CSV Files (*.csv)")
+        filename, _ = QFileDialog.getOpenFileName(self.ui, "Importar Parâmetros", "", "Excel Files (*.xlsx)")
         if not filename:
             return
 
         try:
-            with open(filename, mode='r', newline='', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                mode = None
+            wb = load_workbook(filename)
+            ws = wb.active
+            mode = None
 
-                for row in reader:
-                    if not row:
-                        continue
-                    if row[0] == "[Buses]":
-                        mode = "buses"
-                        continue
-                    elif row[0] == "[Lines]":
-                        mode = "lines"
-                        continue
-                    elif row[0] == "[Transformers]":
-                        mode = "transformers"
-                        continue
+            for row in ws.iter_rows(values_only=True):
+                if not row or row[0] is None:
+                    continue
+                if row[0] == "[Buses]":
+                    mode = "buses"
+                    continue
+                elif row[0] == "[Lines]":
+                    mode = "lines"
+                    continue
+                elif row[0] == "[Transformers]":
+                    mode = "transformers"
+                    continue
 
-                    if row[0] == "ID":
-                        continue
+                if row[0] == "ID":
+                    continue
 
-                    if mode == "buses":
-                        bus_id = int(row[0])
-                        if bus_id in self.state.buses:
-                            self.state.buses[bus_id].p_load_kw = safe_float(row[1])
-                            self.state.buses[bus_id].q_load_kvar = safe_float(row[2])
-                            self.state.buses[bus_id].p_gen_kw = safe_float(row[3])
-                    elif mode == "lines":
-                        line_id = int(row[0])
-                        if line_id in self.state.lines:
-                            self.state.lines[line_id].r_ohm_per_km = safe_float(row[1])
-                            self.state.lines[line_id].x_ohm_per_km = safe_float(row[2])
-                            self.state.lines[line_id].length_km = safe_float(row[3])
-                    elif mode == "transformers":
-                        trafo_id = int(row[0])
-                        if trafo_id in self.state.lines:
-                            self.state.lines[trafo_id].sn_mva = safe_float(row[1])
-                            self.state.lines[trafo_id].vk_percent = safe_float(row[2])
-                            self.state.lines[trafo_id].vkr_percent = safe_float(row[3])
-                            self.state.lines[trafo_id].pfe_kw = safe_float(row[4])
-                            self.state.lines[trafo_id].i0_percent = safe_float(row[5])
+                if mode == "buses":
+                    bus_id = int(row[0])
+                    if bus_id in self.state.buses:
+                        self.state.buses[bus_id].p_load_kw = safe_float(row[1])
+                        self.state.buses[bus_id].q_load_kvar = safe_float(row[2])
+                        self.state.buses[bus_id].p_gen_kw = safe_float(row[3])
+                elif mode == "lines":
+                    line_id = int(row[0])
+                    if line_id in self.state.lines:
+                        self.state.lines[line_id].r_ohm_per_km = safe_float(row[1])
+                        self.state.lines[line_id].x_ohm_per_km = safe_float(row[2])
+                        self.state.lines[line_id].length_km = safe_float(row[3])
+                elif mode == "transformers":
+                    trafo_id = int(row[0])
+                    if trafo_id in self.state.lines:
+                        self.state.lines[trafo_id].sn_mva = safe_float(row[1])
+                        self.state.lines[trafo_id].vk_percent = safe_float(row[2])
+                        self.state.lines[trafo_id].vkr_percent = safe_float(row[3])
+                        self.state.lines[trafo_id].pfe_kw = safe_float(row[4])
+                        self.state.lines[trafo_id].i0_percent = safe_float(row[5])
 
             self.populate_params_tables()
             self.update_diagram()
@@ -329,58 +330,59 @@ class MainController:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
     def export_results(self):
-        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Resultados", "", "CSV Files (*.csv)")
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Resultados", "", "Excel Files (*.xlsx)")
         if not filename:
             return
 
         try:
-            with open(filename, mode='w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
+            wb = Workbook()
+            ws = wb.active
 
-                # Export Bus Results
-                writer.writerow(["[Fluxo de Potência (Tensões Nodais)]"])
-                headers = []
+            # Export Bus Results
+            ws.append(["[Fluxo de Potência (Tensões Nodais)]"])
+            headers = []
+            for j in range(self.ui.table_bus_results.columnCount()):
+                headers.append(self.ui.table_bus_results.horizontalHeaderItem(j).text())
+            ws.append(headers)
+
+            for i in range(self.ui.table_bus_results.rowCount()):
+                row_data = []
                 for j in range(self.ui.table_bus_results.columnCount()):
-                    headers.append(self.ui.table_bus_results.horizontalHeaderItem(j).text())
-                writer.writerow(headers)
+                    item = self.ui.table_bus_results.item(i, j)
+                    row_data.append(item.text() if item else "")
+                ws.append(row_data)
+            ws.append([])
 
-                for i in range(self.ui.table_bus_results.rowCount()):
-                    row_data = []
-                    for j in range(self.ui.table_bus_results.columnCount()):
-                        item = self.ui.table_bus_results.item(i, j)
-                        row_data.append(item.text() if item else "")
-                    writer.writerow(row_data)
-                writer.writerow([])
+            # Export Line Results
+            ws.append(["[Fluxo nas Linhas]"])
+            headers = []
+            for j in range(self.ui.table_line_results.columnCount()):
+                headers.append(self.ui.table_line_results.horizontalHeaderItem(j).text())
+            ws.append(headers)
 
-                # Export Line Results
-                writer.writerow(["[Fluxo nas Linhas]"])
-                headers = []
+            for i in range(self.ui.table_line_results.rowCount()):
+                row_data = []
                 for j in range(self.ui.table_line_results.columnCount()):
-                    headers.append(self.ui.table_line_results.horizontalHeaderItem(j).text())
-                writer.writerow(headers)
+                    item = self.ui.table_line_results.item(i, j)
+                    row_data.append(item.text() if item else "")
+                ws.append(row_data)
+            ws.append([])
 
-                for i in range(self.ui.table_line_results.rowCount()):
-                    row_data = []
-                    for j in range(self.ui.table_line_results.columnCount()):
-                        item = self.ui.table_line_results.item(i, j)
-                        row_data.append(item.text() if item else "")
-                    writer.writerow(row_data)
-                writer.writerow([])
+            # Export Modal Analysis Results
+            ws.append(["[Análise Modal]"])
+            headers = []
+            for j in range(self.ui.table_modal_results.columnCount()):
+                headers.append(self.ui.table_modal_results.horizontalHeaderItem(j).text())
+            ws.append(headers)
 
-                # Export Modal Analysis Results
-                writer.writerow(["[Análise Modal]"])
-                headers = []
+            for i in range(self.ui.table_modal_results.rowCount()):
+                row_data = []
                 for j in range(self.ui.table_modal_results.columnCount()):
-                    headers.append(self.ui.table_modal_results.horizontalHeaderItem(j).text())
-                writer.writerow(headers)
+                    item = self.ui.table_modal_results.item(i, j)
+                    row_data.append(item.text() if item else "")
+                ws.append(row_data)
 
-                for i in range(self.ui.table_modal_results.rowCount()):
-                    row_data = []
-                    for j in range(self.ui.table_modal_results.columnCount()):
-                        item = self.ui.table_modal_results.item(i, j)
-                        row_data.append(item.text() if item else "")
-                    writer.writerow(row_data)
-
+            wb.save(filename)
             QMessageBox.information(self.ui, "Sucesso", "Resultados exportados com sucesso!")
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
