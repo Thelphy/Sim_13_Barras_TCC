@@ -187,14 +187,22 @@ class MainWindowUI(QMainWindow):
         self.table_params_buses = QTableWidget()
         top_layout.addWidget(self.table_params_buses)
 
-        # Bottom half: Lines
+        # Middle third: Lines
+        middle_widget = QWidget()
+        middle_layout = QVBoxLayout(middle_widget)
+        middle_layout.addWidget(QLabel("Parâmetros das Linhas"))
+        self.table_params_lines = QTableWidget()
+        middle_layout.addWidget(self.table_params_lines)
+
+        # Bottom third: Transformers
         bottom_widget = QWidget()
         bottom_layout = QVBoxLayout(bottom_widget)
-        bottom_layout.addWidget(QLabel("Parâmetros das Linhas"))
-        self.table_params_lines = QTableWidget()
-        bottom_layout.addWidget(self.table_params_lines)
+        bottom_layout.addWidget(QLabel("Parâmetros dos Transformadores"))
+        self.table_params_trafos = QTableWidget()
+        bottom_layout.addWidget(self.table_params_trafos)
 
         splitter.addWidget(top_widget)
+        splitter.addWidget(middle_widget)
         splitter.addWidget(bottom_widget)
         layout.addWidget(splitter)
 

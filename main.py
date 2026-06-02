@@ -68,7 +68,12 @@ class MainController:
             lines_data[line_id] = {
                 "r_ohm_per_km": line.r_ohm_per_km,
                 "x_ohm_per_km": line.x_ohm_per_km,
-                "length_km": line.length_km
+                "length_km": line.length_km,
+                "sn_mva": line.sn_mva,
+                "vk_percent": line.vk_percent,
+                "vkr_percent": line.vkr_percent,
+                "pfe_kw": line.pfe_kw,
+                "i0_percent": line.i0_percent
             }
         settings.setValue("lines", json.dumps(lines_data))
 
@@ -98,6 +103,11 @@ class MainController:
                         self.state.lines[line_id].r_ohm_per_km = float(data.get("r_ohm_per_km", self.state.lines[line_id].r_ohm_per_km))
                         self.state.lines[line_id].x_ohm_per_km = float(data.get("x_ohm_per_km", self.state.lines[line_id].x_ohm_per_km))
                         self.state.lines[line_id].length_km = float(data.get("length_km", self.state.lines[line_id].length_km))
+                        self.state.lines[line_id].sn_mva = float(data.get("sn_mva", self.state.lines[line_id].sn_mva))
+                        self.state.lines[line_id].vk_percent = float(data.get("vk_percent", self.state.lines[line_id].vk_percent))
+                        self.state.lines[line_id].vkr_percent = float(data.get("vkr_percent", self.state.lines[line_id].vkr_percent))
+                        self.state.lines[line_id].pfe_kw = float(data.get("pfe_kw", self.state.lines[line_id].pfe_kw))
+                        self.state.lines[line_id].i0_percent = float(data.get("i0_percent", self.state.lines[line_id].i0_percent))
             except Exception as e:
                 print("Erro ao carregar parâmetros de linhas:", e)
 
@@ -123,7 +133,7 @@ class MainController:
         self.state.lines[2] = LineData(2, 632, 645, 0.15, 0.3, 0.8)
         self.state.lines[3] = LineData(3, 645, 646, 0.09, 0.3, 0.8)
         self.state.lines[4] = LineData(4, 632, 633, 0.15, 0.3, 0.8)
-        self.state.lines[5] = LineData(5, 633, 634, 0.0, 0.0, 0.0, is_transformer=True)
+        self.state.lines[5] = LineData(5, 633, 634, 0.0, 0.0, 0.0, is_transformer=True, sn_mva=0.5, vk_percent=2.0, vkr_percent=0.5, pfe_kw=1.0, i0_percent=0.5)
         self.state.lines[6] = LineData(6, 632, 671, 0.60, 0.3, 0.8)
         self.state.lines[7] = LineData(7, 671, 684, 0.09, 0.3, 0.8)
         self.state.lines[8] = LineData(8, 684, 611, 0.09, 0.3, 0.8)
@@ -160,16 +170,32 @@ class MainController:
             self.ui.table_params_buses.setItem(i, 3, QTableWidgetItem(str(bus.p_gen_kw)))
 
         # Populate Lines
-        self.ui.table_params_lines.setRowCount(len(self.state.lines))
+        normal_lines = [l for l in self.state.lines.values() if not l.is_transformer]
+        self.ui.table_params_lines.setRowCount(len(normal_lines))
         self.ui.table_params_lines.setColumnCount(4)
         self.ui.table_params_lines.setHorizontalHeaderLabels(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
-        for i, (line_id, line) in enumerate(self.state.lines.items()):
+        for i, line in enumerate(normal_lines):
             item = QTableWidgetItem(f"{line.from_bus} - {line.to_bus}")
             item.setData(Qt.ItemDataRole.UserRole, line.id)
             self.ui.table_params_lines.setItem(i, 0, item)
             self.ui.table_params_lines.setItem(i, 1, QTableWidgetItem(str(line.r_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 2, QTableWidgetItem(str(line.x_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 3, QTableWidgetItem(str(line.length_km)))
+
+        # Populate Transformers
+        trafos = [l for l in self.state.lines.values() if l.is_transformer]
+        self.ui.table_params_trafos.setRowCount(len(trafos))
+        self.ui.table_params_trafos.setColumnCount(6)
+        self.ui.table_params_trafos.setHorizontalHeaderLabels(["ID", "Sn (MVA)", "vk (%)", "vkr (%)", "pfe (kW)", "i0 (%)"])
+        for i, trafo in enumerate(trafos):
+            item = QTableWidgetItem(f"{trafo.from_bus} - {trafo.to_bus}")
+            item.setData(Qt.ItemDataRole.UserRole, trafo.id)
+            self.ui.table_params_trafos.setItem(i, 0, item)
+            self.ui.table_params_trafos.setItem(i, 1, QTableWidgetItem(str(trafo.sn_mva)))
+            self.ui.table_params_trafos.setItem(i, 2, QTableWidgetItem(str(trafo.vk_percent)))
+            self.ui.table_params_trafos.setItem(i, 3, QTableWidgetItem(str(trafo.vkr_percent)))
+            self.ui.table_params_trafos.setItem(i, 4, QTableWidgetItem(str(trafo.pfe_kw)))
+            self.ui.table_params_trafos.setItem(i, 5, QTableWidgetItem(str(trafo.i0_percent)))
 
     def save_params(self):
         try:
@@ -186,6 +212,15 @@ class MainController:
                     self.state.lines[line_id].r_ohm_per_km = safe_float(self.ui.table_params_lines.item(i, 1).text())
                     self.state.lines[line_id].x_ohm_per_km = safe_float(self.ui.table_params_lines.item(i, 2).text())
                     self.state.lines[line_id].length_km = safe_float(self.ui.table_params_lines.item(i, 3).text())
+
+            for i in range(self.ui.table_params_trafos.rowCount()):
+                trafo_id = self.ui.table_params_trafos.item(i, 0).data(Qt.ItemDataRole.UserRole)
+                if trafo_id in self.state.lines:
+                    self.state.lines[trafo_id].sn_mva = safe_float(self.ui.table_params_trafos.item(i, 1).text())
+                    self.state.lines[trafo_id].vk_percent = safe_float(self.ui.table_params_trafos.item(i, 2).text())
+                    self.state.lines[trafo_id].vkr_percent = safe_float(self.ui.table_params_trafos.item(i, 3).text())
+                    self.state.lines[trafo_id].pfe_kw = safe_float(self.ui.table_params_trafos.item(i, 4).text())
+                    self.state.lines[trafo_id].i0_percent = safe_float(self.ui.table_params_trafos.item(i, 5).text())
 
             self.update_diagram()
             self.save_settings()
@@ -211,7 +246,15 @@ class MainController:
                 writer.writerow(["[Lines]"])
                 writer.writerow(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
                 for line_id, line in self.state.lines.items():
-                    writer.writerow([line.id, line.r_ohm_per_km, line.x_ohm_per_km, line.length_km])
+                    if not line.is_transformer:
+                        writer.writerow([line.id, line.r_ohm_per_km, line.x_ohm_per_km, line.length_km])
+
+                writer.writerow([])
+                writer.writerow(["[Transformers]"])
+                writer.writerow(["ID", "Sn (MVA)", "vk (%)", "vkr (%)", "pfe (kW)", "i0 (%)"])
+                for line_id, line in self.state.lines.items():
+                    if line.is_transformer:
+                        writer.writerow([line.id, line.sn_mva, line.vk_percent, line.vkr_percent, line.pfe_kw, line.i0_percent])
 
             QMessageBox.information(self.ui, "Sucesso", "Parâmetros exportados com sucesso!")
         except Exception as e:
@@ -236,6 +279,9 @@ class MainController:
                     elif row[0] == "[Lines]":
                         mode = "lines"
                         continue
+                    elif row[0] == "[Transformers]":
+                        mode = "transformers"
+                        continue
 
                     if row[0] == "ID":
                         continue
@@ -252,6 +298,14 @@ class MainController:
                             self.state.lines[line_id].r_ohm_per_km = safe_float(row[1])
                             self.state.lines[line_id].x_ohm_per_km = safe_float(row[2])
                             self.state.lines[line_id].length_km = safe_float(row[3])
+                    elif mode == "transformers":
+                        trafo_id = int(row[0])
+                        if trafo_id in self.state.lines:
+                            self.state.lines[trafo_id].sn_mva = safe_float(row[1])
+                            self.state.lines[trafo_id].vk_percent = safe_float(row[2])
+                            self.state.lines[trafo_id].vkr_percent = safe_float(row[3])
+                            self.state.lines[trafo_id].pfe_kw = safe_float(row[4])
+                            self.state.lines[trafo_id].i0_percent = safe_float(row[5])
 
             self.populate_params_tables()
             self.update_diagram()

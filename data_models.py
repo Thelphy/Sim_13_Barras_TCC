@@ -26,6 +26,11 @@ class LineData:
     c_nf_per_km: float = 10.0
     max_i_ka: float = 1.0
     is_transformer: bool = False
+    sn_mva: float = 5.0
+    vk_percent: float = 5.0
+    vkr_percent: float = 1.0
+    pfe_kw: float = 10.0
+    i0_percent: float = 0.5
 
 @dataclass
 class SystemState:
