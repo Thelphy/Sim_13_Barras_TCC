@@ -202,6 +202,8 @@ class PowerSystemEngine:
         if not self.results.success:
             return
 
+        import copy
+
         # Find bus index
         target_bus_idx = self.net.bus[self.net.bus.name == target_bus_name].index
         if len(target_bus_idx) == 0:
@@ -220,31 +222,37 @@ class PowerSystemEngine:
         base_q = self.net.load.loc[load_idx, 'q_mvar']
 
         if base_p == 0:
-            # Add a small base P to allow scaling
             base_p = 0.01
 
         # Robust Newton-Raphson Load Scaling Method
         v_results = []
         p_results = []
 
-        factor = 1.0
+        factor = 0.0
         step = 0.1
         min_step = 1e-4
 
+        last_good = copy.deepcopy(self.net)
+
         while step >= min_step:
-            self.net.load.loc[load_idx, 'p_mw'] = base_p * factor
-            self.net.load.loc[load_idx, 'q_mvar'] = base_q * factor
+            current_p = base_p * factor
+            current_q = base_q * factor
+
+            test_net = copy.deepcopy(last_good)
+            test_net.load.loc[load_idx, 'p_mw'] = current_p
+            test_net.load.loc[load_idx, 'q_mvar'] = current_q
 
             try:
-                pp.runpp(self.net)
-                v_pu = self.net.res_bus.loc[target_bus_idx, 'vm_pu']
-                p_mw = self.net.load.loc[load_idx, 'p_mw']
+                pp.runpp(test_net, enforce_q_lims=False)
+                v_pu = test_net.res_bus.loc[target_bus_idx, 'vm_pu']
+                p_mw = test_net.load.loc[load_idx, 'p_mw']
                 v_results.append(v_pu)
                 p_results.append(p_mw)
 
+                last_good = copy.deepcopy(test_net)
+                self.net = copy.deepcopy(test_net)  # Update actual network state to track success
                 factor += step
             except pp.powerflow.LoadflowNotConverged:
-                # Retreat and half the step size
                 factor -= step
                 step /= 2.0
                 factor += step
