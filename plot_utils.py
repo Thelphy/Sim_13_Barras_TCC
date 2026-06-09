@@ -29,6 +29,13 @@ class PVPlotWidget(QWidget):
 
         self.ax.set_facecolor('#2d2d2d')
         self.ax.tick_params(colors='white')
+        self.ax.xaxis.label.set_color('white')
+        self.ax.yaxis.label.set_color('white')
+        self.ax.title.set_color('white')
+        self.ax.spines['bottom'].set_color('white')
+        self.ax.spines['top'].set_color('white')
+        self.ax.spines['right'].set_color('white')
+        self.ax.spines['left'].set_color('white')
 
         if not p_values or not v_values:
             self.canvas.draw()

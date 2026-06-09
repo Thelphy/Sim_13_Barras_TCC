@@ -223,106 +223,35 @@ class PowerSystemEngine:
             # Add a small base P to allow scaling
             base_p = 0.01
 
-        # Use Continuation Power Flow (CPF) - Custom Predictor-Corrector
+        # Robust Newton-Raphson Load Scaling Method
         v_results = []
         p_results = []
 
-        # Initial conditions from the base successful power flow
         factor = 1.0
         step = 0.1
         min_step = 1e-4
-        dlam = 0.0
-        tangent = None
-
-        from pandapower.pypower.bustypes import bustypes
-        from pandapower.pypower.dSbus_dV import dSbus_dV
 
         while step >= min_step:
+            self.net.load.loc[load_idx, 'p_mw'] = base_p * factor
+            self.net.load.loc[load_idx, 'q_mvar'] = base_q * factor
+
             try:
-                # 1. Corrector (or base solution if first iteration)
-                self.net.load.loc[load_idx, 'p_mw'] = base_p * factor
-                self.net.load.loc[load_idx, 'q_mvar'] = base_q * factor
-
-                # Use standard NR for corrector
-                pp.runpp(self.net, init='results')
-
-                # Save results if converged
+                pp.runpp(self.net)
                 v_pu = self.net.res_bus.loc[target_bus_idx, 'vm_pu']
                 p_mw = self.net.load.loc[load_idx, 'p_mw']
                 v_results.append(v_pu)
                 p_results.append(p_mw)
 
-                # 2. Predictor
-                ppc = self.net._ppc
-                Ybus = ppc['internal']['Ybus']
-                V = ppc['internal']['V']
-                ref, pv, pq = bustypes(ppc['bus'], ppc['gen'])
-                pvpq = np.r_[pv, pq]
-                n_pvpq = len(pvpq)
-                n_pq = len(pq)
-
-                dS_dVm, dS_dVa = dSbus_dV(Ybus, V)
-
-                J11 = dS_dVa.real[np.ix_(pvpq, pvpq)].toarray()
-                J12 = dS_dVm.real[np.ix_(pvpq, pq)].toarray()
-                J21 = dS_dVa.imag[np.ix_(pq, pvpq)].toarray()
-                J22 = dS_dVm.imag[np.ix_(pq, pq)].toarray()
-
-                J = np.vstack([
-                    np.hstack([J11, J12]),
-                    np.hstack([J21, J22])
-                ])
-
-                # Derivative of equations w.r.t parameter lambda (factor)
-                # F(x, lam) = P(x) - Pl_base * lam = 0  => dF/dlam = -Pl_base
-                bus_lookup = self.net._pd2ppc_lookups["bus"]
-                # Convert the pandapower bus index to pypower bus index
-                target_ppc_idx = bus_lookup[target_bus_idx]
-
-                dF_dlam = np.zeros(n_pvpq + n_pq)
-
-                # The load increase is at target_bus_idx.
-                # We need to find its position in the pvpq and pq arrays
-                if target_ppc_idx in pvpq:
-                    idx_in_pvpq = np.where(pvpq == target_ppc_idx)[0][0]
-                    # Since base_p and base_q in pypower are in per unit
-                    # baseMVA = self.net.sn_mva (which is 1.0 in standard pp or stored in ppc)
-                    baseMVA = ppc['baseMVA']
-                    dF_dlam[idx_in_pvpq] = base_p / baseMVA
-
-                if target_ppc_idx in pq:
-                    idx_in_pq = np.where(pq == target_ppc_idx)[0][0]
-                    dF_dlam[n_pvpq + idx_in_pq] = base_q / baseMVA
-
-                # Augmented Jacobian for the predictor:
-                # [ J, dF_dlam ] [ dx ] = [ 0 ]
-                # [ e_k^T      ] [ dlam ] = [ 1 ]
-
-                # We set the step directly on lambda for the tangent vector: dlam = 1
-                # So J * dx + dF_dlam * 1 = 0 => J * dx = -dF_dlam
-                dx = np.linalg.solve(J, -dF_dlam)
-
-                # dx contains [dVa_pvpq, dVm_pq] for dlam = 1
-                # Normalizing tangent vector
-                tangent = np.append(dx, 1.0)
-                tangent = tangent / np.linalg.norm(tangent)
-
-                # The step size affects how far we jump along the tangent
-                dlam = tangent[-1] * step
-                factor += dlam
-
-                # We could update the voltages for 'init=results' but runpp
-                # will just overwrite them with net.res_bus values anyway,
-                # so we let the corrector (runpp) handle finding the exact point.
-
+                factor += step
             except pp.powerflow.LoadflowNotConverged:
-                # If corrector fails, half the step size and retreat from last valid factor
+                # Retreat and half the step size
+                factor -= step
                 step /= 2.0
-                if tangent is not None:
-                    factor -= dlam
-                    factor += tangent[-1] * step
-                else:
-                    factor = 1.0 + step
+                factor += step
+            except Exception:
+                factor -= step
+                step /= 2.0
+                factor += step
 
         # Restore original load
         self.net.load.loc[load_idx, 'p_mw'] = base_p
