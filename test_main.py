@@ -21,11 +21,11 @@ def test_main_init_default_data(mock_qapp, mock_ui):
     assert 650 in controller.state.buses
     assert controller.state.buses[650].name == "650 (Slack)"
     assert controller.state.buses[650].type == "slack"
-    assert controller.state.buses[650].vn_kv == 4.16
+    assert controller.state.buses[650].vn_kv == 13.8
 
     assert 634 in controller.state.buses
-    assert controller.state.buses[634].vn_kv == 0.48
-    assert controller.state.buses[634].p_load_kw == 400
+    assert controller.state.buses[634].vn_kv == 0.22
+    assert controller.state.buses[634].p_load_kw == 340
 
     assert 671 in controller.state.buses
     assert controller.state.buses[671].q_load_kvar == 660
@@ -42,4 +42,4 @@ def test_main_init_default_data(mock_qapp, mock_ui):
     assert 2 in controller.state.lines
     assert controller.state.lines[2].from_bus == 632
     assert controller.state.lines[2].to_bus == 645
-    assert controller.state.lines[2].length_km == 0.15
+    assert controller.state.lines[2].length_km == 0.1524
