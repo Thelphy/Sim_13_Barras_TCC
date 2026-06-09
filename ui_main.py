@@ -210,8 +210,8 @@ class MainWindowUI(QMainWindow):
         layout.addWidget(splitter)
 
         btn_layout = QHBoxLayout()
-        self.btn_export_params = QPushButton("Exportar Dados (CSV)")
-        self.btn_import_params = QPushButton("Importar Dados (CSV)")
+        self.btn_export_params = QPushButton("Exportar Dados")
+        self.btn_import_params = QPushButton("Importar Dados")
         btn_layout.addWidget(self.btn_export_params)
         btn_layout.addWidget(self.btn_import_params)
 
@@ -253,7 +253,7 @@ class MainWindowUI(QMainWindow):
         splitter.addWidget(widget_modal)
         layout.addWidget(splitter)
 
-        self.btn_export_results = QPushButton("Exportar Resultados (CSV)")
+        self.btn_export_results = QPushButton("Exportar Resultados")
         layout.addWidget(self.btn_export_results)
 
         self.tabs.addTab(self.tab2, "Resultados")
@@ -264,7 +264,7 @@ class MainWindowUI(QMainWindow):
         self.pv_plot = PVPlotWidget()
         layout.addWidget(self.pv_plot)
 
-        self.btn_export_plot = QPushButton("Exportar Gráfico (PNG/JPG)")
+        self.btn_export_plot = QPushButton("Exportar Gráfico")
         layout.addWidget(self.btn_export_plot)
 
         self.tabs.addTab(self.tab3, "Gráficos")
