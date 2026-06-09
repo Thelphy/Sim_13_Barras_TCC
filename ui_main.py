@@ -201,8 +201,11 @@ class MainWindowUI(QMainWindow):
         self.table_params_trafos = QTableWidget()
         bottom_layout.addWidget(self.table_params_trafos)
 
-        splitter.addWidget(top_widget)
-        splitter.addWidget(middle_widget)
+        horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
+        horizontal_splitter.addWidget(top_widget)
+        horizontal_splitter.addWidget(middle_widget)
+
+        splitter.addWidget(horizontal_splitter)
         splitter.addWidget(bottom_widget)
         layout.addWidget(splitter)
 
@@ -222,28 +225,32 @@ class MainWindowUI(QMainWindow):
         self.tab2 = QWidget()
         layout = QVBoxLayout(self.tab2)
 
-        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Top half: Power Flow Results
-        top_widget = QWidget()
-        top_layout = QVBoxLayout(top_widget)
-        top_layout.addWidget(QLabel("Resultados: Fluxo de Potência (Tensões Nodais)"))
+        # Nodal Voltages
+        widget_bus = QWidget()
+        layout_bus = QVBoxLayout(widget_bus)
+        layout_bus.addWidget(QLabel("Resultados: Fluxo de Potência (Tensões Nodais)"))
         self.table_bus_results = QTableWidget()
-        top_layout.addWidget(self.table_bus_results)
+        layout_bus.addWidget(self.table_bus_results)
 
-        top_layout.addWidget(QLabel("Resultados: Fluxo nas Linhas"))
+        # Line Flows
+        widget_line = QWidget()
+        layout_line = QVBoxLayout(widget_line)
+        layout_line.addWidget(QLabel("Resultados: Fluxo nas Linhas"))
         self.table_line_results = QTableWidget()
-        top_layout.addWidget(self.table_line_results)
+        layout_line.addWidget(self.table_line_results)
 
-        # Bottom half: Modal Analysis Results
-        bottom_widget = QWidget()
-        bottom_layout = QVBoxLayout(bottom_widget)
-        bottom_layout.addWidget(QLabel("Análise Modal (Menores Autovalores / Fatores de Participação)"))
+        # Modal Analysis Results
+        widget_modal = QWidget()
+        layout_modal = QVBoxLayout(widget_modal)
+        layout_modal.addWidget(QLabel("Análise Modal (Menores Autovalores / Fatores de Participação)"))
         self.table_modal_results = QTableWidget()
-        bottom_layout.addWidget(self.table_modal_results)
+        layout_modal.addWidget(self.table_modal_results)
 
-        splitter.addWidget(top_widget)
-        splitter.addWidget(bottom_widget)
+        splitter.addWidget(widget_bus)
+        splitter.addWidget(widget_line)
+        splitter.addWidget(widget_modal)
         layout.addWidget(splitter)
 
         self.btn_export_results = QPushButton("Exportar Resultados (CSV)")
