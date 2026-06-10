@@ -11,6 +11,8 @@ from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
 
 def safe_float(val_str):
+    if isinstance(val_str, str):
+        val_str = val_str.replace(',', '.')
     v = float(val_str)
     if not math.isfinite(v):
         raise ValueError(f"Value '{val_str}' is not a finite float.")
@@ -28,7 +30,10 @@ class SimulationThread(QThread):
         engine = PowerSystemEngine()
         engine.build_network(self.state)
         engine.run_power_flow()
-        engine.run_modal_analysis()
+
+        
+        if engine.results.success:
+            engine.run_modal_analysis()
         if self.target_bus:
             engine.generate_pv_curve(self.target_bus)
         self.finished.emit(engine.results)
@@ -38,15 +43,18 @@ class MainController:
         self.app = QApplication(sys.argv)
         self.ui = MainWindowUI()
         self.state = SystemState()
+        self.scenarios = {}
 
         self.init_default_data()
         self.load_settings()
+        self.load_scenarios()
         self.setup_connections()
 
         # Initial draw
         self.update_diagram()
         self.populate_params_tables()
         self.populate_target_combo()
+        self.update_scenarios_combo()
 
 
     def save_settings(self):
@@ -111,6 +119,102 @@ class MainController:
             except Exception as e:
                 print("Erro ao carregar parâmetros de linhas:", e)
 
+    def load_scenarios(self):
+        settings = QSettings("SimuladorSEP", "Cenarios")
+        data = settings.value("data", "{}")
+        try:
+            self.scenarios = json.loads(data)
+        except:
+            self.scenarios = {}
+
+    def save_scenarios(self):
+        settings = QSettings("SimuladorSEP", "Cenarios")
+        settings.setValue("data", json.dumps(self.scenarios))
+        self.update_scenarios_combo()
+
+    def update_scenarios_combo(self):
+        self.ui.combo_scenarios.blockSignals(True)
+        self.ui.combo_scenarios.clear()
+        self.ui.combo_scenarios.addItem("-- Selecionar Cenário --")
+        self.ui.combo_scenarios.addItems(list(self.scenarios.keys()))
+        self.ui.combo_scenarios.blockSignals(False)
+
+    def on_scenario_selected(self, idx):
+        if idx <= 0:
+            return
+        name = self.ui.combo_scenarios.currentText()
+        if name in self.scenarios:
+            scen_data = self.scenarios[name]
+            self.apply_scenario_data(scen_data)
+            self.populate_params_tables()
+            self.update_diagram()
+            self.save_settings()
+            self.ui.toast.show_toast(f"Cenário '{name}' carregado!", True, self.ui)
+
+    def apply_scenario_data(self, scen_data):
+        buses_data = scen_data.get("buses", {})
+        for bus_id_str, data in buses_data.items():
+            bus_id = int(bus_id_str)
+            if bus_id in self.state.buses:
+                self.state.buses[bus_id].p_load_kw = float(data.get("p_load_kw", self.state.buses[bus_id].p_load_kw))
+                self.state.buses[bus_id].q_load_kvar = float(data.get("q_load_kvar", self.state.buses[bus_id].q_load_kvar))
+                self.state.buses[bus_id].p_gen_kw = float(data.get("p_gen_kw", self.state.buses[bus_id].p_gen_kw))
+
+        lines_data = scen_data.get("lines", {})
+        for line_id_str, data in lines_data.items():
+            line_id = int(line_id_str)
+            if line_id in self.state.lines:
+                self.state.lines[line_id].r_ohm_per_km = float(data.get("r_ohm_per_km", self.state.lines[line_id].r_ohm_per_km))
+                self.state.lines[line_id].x_ohm_per_km = float(data.get("x_ohm_per_km", self.state.lines[line_id].x_ohm_per_km))
+                self.state.lines[line_id].length_km = float(data.get("length_km", self.state.lines[line_id].length_km))
+                self.state.lines[line_id].sn_mva = float(data.get("sn_mva", self.state.lines[line_id].sn_mva))
+                self.state.lines[line_id].vk_percent = float(data.get("vk_percent", self.state.lines[line_id].vk_percent))
+                self.state.lines[line_id].vkr_percent = float(data.get("vkr_percent", self.state.lines[line_id].vkr_percent))
+                self.state.lines[line_id].pfe_kw = float(data.get("pfe_kw", self.state.lines[line_id].pfe_kw))
+                self.state.lines[line_id].i0_percent = float(data.get("i0_percent", self.state.lines[line_id].i0_percent))
+
+    def save_scenario_action(self):
+        from PyQt6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(self.ui, "Salvar Cenário", "Nome do Cenário:")
+        if ok and name.strip():
+            name = name.strip()
+            # Serialize current parameters
+            buses_data = {}
+            for bus_id, bus in self.state.buses.items():
+                buses_data[bus_id] = {
+                    "p_load_kw": bus.p_load_kw,
+                    "q_load_kvar": bus.q_load_kvar,
+                    "p_gen_kw": bus.p_gen_kw
+                }
+            lines_data = {}
+            for line_id, line in self.state.lines.items():
+                lines_data[line_id] = {
+                    "r_ohm_per_km": line.r_ohm_per_km,
+                    "x_ohm_per_km": line.x_ohm_per_km,
+                    "length_km": line.length_km,
+                    "sn_mva": line.sn_mva,
+                    "vk_percent": line.vk_percent,
+                    "vkr_percent": line.vkr_percent,
+                    "pfe_kw": line.pfe_kw,
+                    "i0_percent": line.i0_percent
+                }
+            self.scenarios[name] = {"buses": buses_data, "lines": lines_data}
+            self.save_scenarios()
+            self.ui.toast.show_toast(f"Cenário '{name}' salvo!", True, self.ui)
+
+    def delete_scenario_action(self):
+        from PyQt6.QtWidgets import QInputDialog
+        if not self.scenarios:
+            QMessageBox.information(self.ui, "Excluir Cenário", "Nenhum cenário salvo.")
+            return
+
+        items = list(self.scenarios.keys())
+        item, ok = QInputDialog.getItem(self.ui, "Excluir Cenário", "Selecione o cenário a excluir:", items, 0, False)
+        if ok and item:
+            del self.scenarios[item]
+            self.save_scenarios()
+            self.ui.toast.show_toast(f"Cenário '{item}' excluído!", True, self.ui)
+
     def init_default_data(self):
         # 13 Bus system based on IEEE 13 Node Test Feeder layout
         self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=13.8, type='slack', v_target_pu=1.0)
@@ -138,7 +242,7 @@ class MainController:
         self.state.lines[7] = LineData(7, 671, 684, 0.0914, 0.3679, 0.4726)
         self.state.lines[8] = LineData(8, 684, 611, 0.0914, 0.3679, 0.4726)
         self.state.lines[9] = LineData(9, 684, 652, 0.2438, 0.3679, 0.4726)
-        self.state.lines[10] = LineData(10, 671, 692, 0.001, 0.001, 0.001) # switch (avoid divide by zero)
+        self.state.lines[10] = LineData(10, 671, 692, 0.01, 0.01, 0.01) # switch (avoid divide by zero and ill-conditioning)
         self.state.lines[11] = LineData(11, 692, 675, 0.1524, 0.3679, 0.4726)
         self.state.lines[12] = LineData(12, 671, 680, 0.3048, 0.1155, 0.371)
 
@@ -153,6 +257,9 @@ class MainController:
         self.ui.btn_export_results.clicked.connect(self.export_results)
         self.ui.btn_export_plot.clicked.connect(self.export_plot)
         self.ui.app_closed.connect(self.save_settings)
+        self.ui.btn_save_scenario.clicked.connect(self.save_scenario_action)
+        self.ui.btn_delete_scenario.clicked.connect(self.delete_scenario_action)
+        self.ui.combo_scenarios.currentIndexChanged.connect(self.on_scenario_selected)
 
     def on_diagram_data_updated(self):
         self.update_diagram()
