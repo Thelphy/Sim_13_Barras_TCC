@@ -24,7 +24,7 @@ class PVPlotWidget(QWidget):
         self.ax.spines['right'].set_color('white')
         self.ax.spines['left'].set_color('white')
 
-    def plot_curve(self, p_values, v_values):
+    def plot_curve(self, p_values, v_values, target_bus_name=""):
         self.ax.clear()
 
         self.ax.set_facecolor('#2d2d2d')
@@ -49,7 +49,8 @@ class PVPlotWidget(QWidget):
         collapse_v = v_values[max_idx]
         self.ax.plot(collapse_p, collapse_v, color='red', marker='x', markersize=10, mew=2, label="Ponto de Colapso")
 
-        self.ax.set_title("Curva PV (Tensão x Potência)")
+        title = f"Curva PV (Tensão x Potência) - Barra {target_bus_name}" if target_bus_name else "Curva PV (Tensão x Potência)"
+        self.ax.set_title(title)
         self.ax.set_xlabel("Potência Ativa (MW)")
         self.ax.set_ylabel("Tensão (PU)")
         self.ax.grid(True, linestyle='--', alpha=0.5, color='gray')

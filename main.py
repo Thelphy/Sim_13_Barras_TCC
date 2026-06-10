@@ -380,6 +380,27 @@ class MainController:
             self.ui.table_params_trafos.setItem(i, 3, QTableWidgetItem(str(trafo.vkr_percent)))
             self.ui.table_params_trafos.setItem(i, 4, QTableWidgetItem(str(trafo.pfe_kw)))
             self.ui.table_params_trafos.setItem(i, 5, QTableWidgetItem(str(trafo.i0_percent)))
+            
+        self.ui.table_cables.resizeColumnsToContents()
+        self.ui.table_params_buses.resizeColumnsToContents()
+        self.ui.table_params_lines.resizeColumnsToContents()
+        self.ui.table_params_trafos.resizeColumnsToContents()
+        
+        self.adjust_table_size(self.ui.table_cables)
+        self.adjust_table_size(self.ui.table_params_buses)
+        self.adjust_table_size(self.ui.table_params_lines)
+        self.adjust_table_size(self.ui.table_params_trafos)
+
+    def adjust_table_size(self, table):
+        h = table.horizontalHeader().height()
+        for i in range(table.rowCount()):
+            h += table.rowHeight(i)
+        table.setMinimumHeight(h + 10)
+        
+        w = table.verticalHeader().width() if table.verticalHeader().isVisible() else 0
+        for i in range(table.columnCount()):
+            w += table.columnWidth(i)
+        table.setMinimumWidth(w + 30)
 
     def save_params(self):
         try:
@@ -419,7 +440,10 @@ class MainController:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
 
     def export_params(self):
-        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Parâmetros", "", "Excel Files (*.xlsx)")
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"parametros_{timestamp}.xlsx"
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Parâmetros", default_name, "Excel Files (*.xlsx)")
         if not filename:
             return
 
@@ -508,7 +532,10 @@ class MainController:
 
 
     def export_plot(self):
-        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Gráfico", "", "Images (*.png *.jpg *.jpeg)")
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"curva_pv_{timestamp}.png"
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Gráfico", default_name, "Images (*.png *.jpg *.jpeg)")
         if not filename:
             return
 
@@ -519,7 +546,10 @@ class MainController:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
     def export_results(self):
-        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Resultados", "", "Excel Files (*.xlsx)")
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"resultados_{timestamp}.xlsx"
+        filename, _ = QFileDialog.getSaveFileName(self.ui, "Exportar Resultados", default_name, "Excel Files (*.xlsx)")
         if not filename:
             return
 
@@ -620,9 +650,14 @@ class MainController:
 
         modal_headers = ["Barra", "Autovalor (Real)", "Fator de Participação"]
         populate_table(self.ui.table_modal_results, modal_data, modal_headers)
+        
+        self.adjust_table_size(self.ui.table_bus_results)
+        self.adjust_table_size(self.ui.table_line_results)
+        self.adjust_table_size(self.ui.table_modal_results)
 
         # Update Plot
-        self.ui.pv_plot.plot_curve(results.pv_curve_p, results.pv_curve_v)
+        target_bus = self.ui.combo_target_bus.currentText()
+        self.ui.pv_plot.plot_curve(results.pv_curve_p, results.pv_curve_v, target_bus)
 
     def run(self):
         self.ui.show()

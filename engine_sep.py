@@ -232,6 +232,7 @@ class PowerSystemEngine:
         target_step_mw = 0.1
         step = target_step_mw / base_p
         min_step = 0.001 / base_p
+        max_step = 15.0 / base_p  # Limit maximum step to 15000 kW for smoother curve
 
         v_results = []
         p_results = []
@@ -256,7 +257,7 @@ class PowerSystemEngine:
                 factor += step
                 success_count += 1
                 if success_count >= 3:
-                    step *= 1.5
+                    step = min(step * 1.5, max_step)
             except pp.powerflow.LoadflowNotConverged:
                 factor -= step
                 step /= 2.5
@@ -319,7 +320,7 @@ class PowerSystemEngine:
                     factor_lower += step_lower
                     success_count_lower += 1
                     if success_count_lower >= 3:
-                        step_lower *= 1.5
+                        step_lower = max(step_lower * 1.5, -max_step)
                 except pp.powerflow.LoadflowNotConverged:
                     self.net.res_bus = last_good_res_bus.copy()
                     factor_lower -= step_lower
