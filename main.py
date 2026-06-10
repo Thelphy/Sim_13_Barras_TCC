@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDi
 from openpyxl import Workbook, load_workbook
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QSettings
 
-from data_models import SystemState, BusData, LineData
+from data_models import SystemState, BusData, LineData, CableConfig
 from ui_main import MainWindowUI
 from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
@@ -85,6 +85,15 @@ class MainController:
             }
         settings.setValue("lines", json.dumps(lines_data))
 
+        # Save cables
+        cables_data = {}
+        for c_name, cable in self.state.cables.items():
+            cables_data[c_name] = {
+                "r_ohm_per_km": cable.r_ohm_per_km,
+                "x_ohm_per_km": cable.x_ohm_per_km
+            }
+        settings.setValue("cables", json.dumps(cables_data))
+
     def load_settings(self):
         settings = QSettings("SimuladorSEP", "Parametros")
 
@@ -118,6 +127,19 @@ class MainController:
                         self.state.lines[line_id].i0_percent = float(data.get("i0_percent", self.state.lines[line_id].i0_percent))
             except Exception as e:
                 print("Erro ao carregar parâmetros de linhas:", e)
+                
+        cables_str = settings.value("cables", "")
+        if cables_str:
+            try:
+                cables_data = json.loads(cables_str)
+                for c_name, data in cables_data.items():
+                    self.state.cables[c_name] = CableConfig(
+                        name=c_name,
+                        r_ohm_per_km=float(data.get("r_ohm_per_km", 0.1)),
+                        x_ohm_per_km=float(data.get("x_ohm_per_km", 0.1))
+                    )
+            except Exception as e:
+                print("Erro ao carregar parâmetros de cabos:", e)
 
     def load_scenarios(self):
         settings = QSettings("SimuladorSEP", "Cenarios")
@@ -260,13 +282,45 @@ class MainController:
         self.ui.btn_save_scenario.clicked.connect(self.save_scenario_action)
         self.ui.btn_delete_scenario.clicked.connect(self.delete_scenario_action)
         self.ui.combo_scenarios.currentIndexChanged.connect(self.on_scenario_selected)
+        
+        self.ui.btn_add_cable.clicked.connect(self.add_cable)
+        self.ui.btn_remove_cable.clicked.connect(self.remove_cable)
 
     def on_diagram_data_updated(self):
         self.update_diagram()
         self.populate_params_tables()
         self.save_settings()
+        
+    def add_cable(self):
+        from PyQt6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(self.ui, "Novo Cabo", "Nome do Cabo:")
+        if ok and name and name not in self.state.cables:
+            self.state.cables[name] = CableConfig(name=name, r_ohm_per_km=0.1, x_ohm_per_km=0.1)
+            self.populate_params_tables()
+            self.save_settings()
+            
+    def remove_cable(self):
+        from PyQt6.QtWidgets import QInputDialog
+        if not self.state.cables:
+            return
+        items = list(self.state.cables.keys())
+        item, ok = QInputDialog.getItem(self.ui, "Remover Cabo", "Selecione o cabo:", items, 0, False)
+        if ok and item in self.state.cables:
+            del self.state.cables[item]
+            self.populate_params_tables()
+            self.save_settings()
 
     def populate_params_tables(self):
+        from PyQt6.QtWidgets import QTableWidgetItem
+        # Populate Cables
+        self.ui.table_cables.setRowCount(len(self.state.cables))
+        self.ui.table_cables.setColumnCount(3)
+        self.ui.table_cables.setHorizontalHeaderLabels(["Nome", "R (ohm/km)", "X (ohm/km)"])
+        for i, (name, cable) in enumerate(self.state.cables.items()):
+            self.ui.table_cables.setItem(i, 0, QTableWidgetItem(name))
+            self.ui.table_cables.setItem(i, 1, QTableWidgetItem(str(cable.r_ohm_per_km)))
+            self.ui.table_cables.setItem(i, 2, QTableWidgetItem(str(cable.x_ohm_per_km)))
+
         # Populate Buses
         self.ui.table_params_buses.setRowCount(len(self.state.buses))
         self.ui.table_params_buses.setColumnCount(4)
@@ -278,10 +332,11 @@ class MainController:
             self.ui.table_params_buses.setItem(i, 3, QTableWidgetItem(str(bus.p_gen_kw)))
 
         # Populate Lines
+        from PyQt6.QtWidgets import QComboBox
         normal_lines = [l for l in self.state.lines.values() if not l.is_transformer]
         self.ui.table_params_lines.setRowCount(len(normal_lines))
-        self.ui.table_params_lines.setColumnCount(4)
-        self.ui.table_params_lines.setHorizontalHeaderLabels(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)"])
+        self.ui.table_params_lines.setColumnCount(5)
+        self.ui.table_params_lines.setHorizontalHeaderLabels(["ID", "R (ohm/km)", "X (ohm/km)", "Length (km)", "Cabo"])
         for i, line in enumerate(normal_lines):
             item = QTableWidgetItem(f"{line.from_bus} - {line.to_bus}")
             item.setData(Qt.ItemDataRole.UserRole, line.id)
@@ -289,6 +344,27 @@ class MainController:
             self.ui.table_params_lines.setItem(i, 1, QTableWidgetItem(str(line.r_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 2, QTableWidgetItem(str(line.x_ohm_per_km)))
             self.ui.table_params_lines.setItem(i, 3, QTableWidgetItem(str(line.length_km)))
+            
+            combo = QComboBox()
+            combo.addItem("Personalizado")
+            for c_name in self.state.cables.keys():
+                combo.addItem(c_name)
+            
+            # Select correct cable if matches
+            for c_name, c_data in self.state.cables.items():
+                if abs(c_data.r_ohm_per_km - line.r_ohm_per_km) < 1e-4 and abs(c_data.x_ohm_per_km - line.x_ohm_per_km) < 1e-4:
+                    combo.setCurrentText(c_name)
+                    break
+            
+            # Connect
+            def on_cable_selected(text, row=i):
+                if text in self.state.cables:
+                    c = self.state.cables[text]
+                    self.ui.table_params_lines.item(row, 1).setText(str(c.r_ohm_per_km))
+                    self.ui.table_params_lines.item(row, 2).setText(str(c.x_ohm_per_km))
+            
+            combo.currentTextChanged.connect(on_cable_selected)
+            self.ui.table_params_lines.setCellWidget(i, 4, combo)
 
         # Populate Transformers
         trafos = [l for l in self.state.lines.values() if l.is_transformer]
@@ -307,6 +383,12 @@ class MainController:
 
     def save_params(self):
         try:
+            for i in range(self.ui.table_cables.rowCount()):
+                name = self.ui.table_cables.item(i, 0).text()
+                if name in self.state.cables:
+                    self.state.cables[name].r_ohm_per_km = safe_float(self.ui.table_cables.item(i, 1).text())
+                    self.state.cables[name].x_ohm_per_km = safe_float(self.ui.table_cables.item(i, 2).text())
+                    
             for i in range(self.ui.table_params_buses.rowCount()):
                 bus_id = int(self.ui.table_params_buses.item(i, 0).text())
                 if bus_id in self.state.buses:

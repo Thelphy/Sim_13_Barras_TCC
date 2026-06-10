@@ -44,22 +44,48 @@ class BusDialog(QDialog):
             QMessageBox.warning(self, "Invalid Input", "Please enter valid numeric values.")
 
 class LineDialog(QDialog):
-    def __init__(self, line: LineData, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle(f"Edit Line: {line.id}")
+    def __init__(self, line: LineData, diagram_view=None):
+        super().__init__(diagram_view)
+        self.setWindowTitle(f"Editar Linha: {line.id}")
         self.line = line
+        self.diagram_view = diagram_view
         self.layout = QVBoxLayout(self)
-
+        
+        from PyQt6.QtWidgets import QComboBox
+        self.combo_cable = QComboBox()
+        self.combo_cable.addItem("Personalizado")
+        if self.diagram_view and hasattr(self.diagram_view, 'state'):
+            for c_name in self.diagram_view.state.cables.keys():
+                self.combo_cable.addItem(c_name)
+        
         self.r_edit = QLineEdit(str(line.r_ohm_per_km))
         self.x_edit = QLineEdit(str(line.x_ohm_per_km))
         self.length_edit = QLineEdit(str(line.length_km))
 
+        self.layout.addWidget(QLabel("Cabo:"))
+        self.layout.addWidget(self.combo_cable)
         self.layout.addWidget(QLabel("R (ohm/km):"))
         self.layout.addWidget(self.r_edit)
         self.layout.addWidget(QLabel("X (ohm/km):"))
         self.layout.addWidget(self.x_edit)
-        self.layout.addWidget(QLabel("Length (km):"))
+        self.layout.addWidget(QLabel("Comprimento (km):"))
         self.layout.addWidget(self.length_edit)
+        
+        self.combo_cable.currentTextChanged.connect(self.on_cable_changed)
+        
+        # Try to select the correct cable initially
+        if self.diagram_view and hasattr(self.diagram_view, 'state'):
+            for c_name, c_data in self.diagram_view.state.cables.items():
+                if abs(c_data.r_ohm_per_km - line.r_ohm_per_km) < 1e-4 and abs(c_data.x_ohm_per_km - line.x_ohm_per_km) < 1e-4:
+                    self.combo_cable.setCurrentText(c_name)
+                    break
+                    
+    def on_cable_changed(self, text):
+        if text != "Personalizado" and self.diagram_view and hasattr(self.diagram_view, 'state'):
+            if text in self.diagram_view.state.cables:
+                cable = self.diagram_view.state.cables[text]
+                self.r_edit.setText(str(cable.r_ohm_per_km))
+                self.x_edit.setText(str(cable.x_ohm_per_km))
 
         save_btn = QPushButton("Aplicar")
         save_btn.clicked.connect(self.save_data)
@@ -234,6 +260,7 @@ class NetworkDiagram(QGraphicsView):
         self.bus_coords = {}
 
     def draw_network(self, system_state):
+        self.state = system_state
         self.scene.clear()
         self.bus_coords.clear()
 

@@ -33,9 +33,16 @@ class LineData:
     i0_percent: float = 0.5
 
 @dataclass
+class CableConfig:
+    name: str
+    r_ohm_per_km: float
+    x_ohm_per_km: float
+
+@dataclass
 class SystemState:
     buses: Dict[int, BusData] = field(default_factory=dict)
     lines: Dict[int, LineData] = field(default_factory=dict)
+    cables: Dict[str, CableConfig] = field(default_factory=dict)
 
 @dataclass
 class SimulationResults:

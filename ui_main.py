@@ -212,13 +212,31 @@ class MainWindowUI(QMainWindow):
         bottom_layout.addWidget(QLabel("Parâmetros dos Transformadores"))
         self.table_params_trafos = QTableWidget()
         bottom_layout.addWidget(self.table_params_trafos)
+        
+        # Cables Configuration
+        cables_widget = QWidget()
+        cables_layout = QVBoxLayout(cables_widget)
+        cables_layout.addWidget(QLabel("Padrões de Cabos"))
+        self.table_cables = QTableWidget()
+        cables_layout.addWidget(self.table_cables)
+        
+        cables_btn_layout = QHBoxLayout()
+        self.btn_add_cable = QPushButton("Novo Cabo")
+        self.btn_remove_cable = QPushButton("Remover Cabo")
+        cables_btn_layout.addWidget(self.btn_add_cable)
+        cables_btn_layout.addWidget(self.btn_remove_cable)
+        cables_layout.addLayout(cables_btn_layout)
 
         horizontal_splitter = QSplitter(Qt.Orientation.Horizontal)
         horizontal_splitter.addWidget(top_widget)
         horizontal_splitter.addWidget(middle_widget)
+        
+        bottom_splitter = QSplitter(Qt.Orientation.Horizontal)
+        bottom_splitter.addWidget(bottom_widget)
+        bottom_splitter.addWidget(cables_widget)
 
         splitter.addWidget(horizontal_splitter)
-        splitter.addWidget(bottom_widget)
+        splitter.addWidget(bottom_splitter)
         layout.addWidget(splitter)
 
         btn_layout = QHBoxLayout()
