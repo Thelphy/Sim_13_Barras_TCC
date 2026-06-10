@@ -160,6 +160,18 @@ class MainWindowUI(QMainWindow):
         self.diagram_view = NetworkDiagram()
         layout.addWidget(self.diagram_view, stretch=1)
 
+        # Floating window for scenarios
+        self.scenario_panel = QWidget(self.diagram_view)
+        self.scenario_panel.setStyleSheet("QWidget { background-color: rgba(30, 30, 30, 230); border-radius: 8px; border: 1px solid #555; } QLabel { background: transparent; border: none; } QComboBox { background: #2d2d2d; }")
+        sc_layout = QVBoxLayout(self.scenario_panel)
+        lbl_sc = QLabel("Cenários")
+        lbl_sc.setStyleSheet("font-weight: bold; font-size: 14px;")
+        self.combo_scenarios = QComboBox()
+        sc_layout.addWidget(lbl_sc)
+        sc_layout.addWidget(self.combo_scenarios)
+        self.scenario_panel.move(15, 15)
+        self.scenario_panel.resize(220, 80)
+
         # Control Panel
         control_panel = QHBoxLayout()
         self.lbl_target = QLabel("Barra Alvo (Curva PV):")
@@ -214,6 +226,11 @@ class MainWindowUI(QMainWindow):
         self.btn_import_params = QPushButton("Importar Dados")
         btn_layout.addWidget(self.btn_export_params)
         btn_layout.addWidget(self.btn_import_params)
+
+        self.btn_save_scenario = QPushButton("Salvar Cenário")
+        self.btn_delete_scenario = QPushButton("Excluir Cenário")
+        btn_layout.addWidget(self.btn_save_scenario)
+        btn_layout.addWidget(self.btn_delete_scenario)
 
         self.btn_save_params = QPushButton("Salvar Alterações")
         btn_layout.addWidget(self.btn_save_params)

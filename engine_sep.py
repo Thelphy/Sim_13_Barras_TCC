@@ -66,17 +66,21 @@ class PowerSystemEngine:
                                                       pfe_kw=pfe_kw, i0_percent=i0_percent,
                                                       name=f"Trafo {line_id}")
             else:
+                r_eff = max(line.r_ohm_per_km, 0.01)
+                x_eff = max(line.x_ohm_per_km, 0.01)
+                len_eff = max(line.length_km, 0.01)
+
                 pp.create_line_from_parameters(self.net, from_bus=from_idx, to_bus=to_idx,
-                                               length_km=line.length_km,
-                                               r_ohm_per_km=line.r_ohm_per_km,
-                                               x_ohm_per_km=line.x_ohm_per_km,
+                                               length_km=len_eff,
+                                               r_ohm_per_km=r_eff,
+                                               x_ohm_per_km=x_eff,
                                                c_nf_per_km=line.c_nf_per_km,
                                                max_i_ka=line.max_i_ka,
                                                name=f"Line {line_id}")
 
     def run_power_flow(self):
         try:
-            pp.runpp(self.net)
+            pp.runpp(self.net, numba=False)
             self.results.success = True
 
             # Extract Bus Results
@@ -221,45 +225,121 @@ class PowerSystemEngine:
         base_p = self.net.load.loc[load_idx, 'p_mw']
         base_q = self.net.load.loc[load_idx, 'q_mvar']
 
-        if base_p == 0:
-            base_p = 0.01
+        if base_p < 0.01:
+            base_p = 1.0 # Treat 0 load as 1 MW base for scaling
+            base_q = 0.0
+            
+        target_step_mw = 0.1
+        step = target_step_mw / base_p
+        min_step = 0.001 / base_p
 
-        # Robust Newton-Raphson Load Scaling Method
         v_results = []
         p_results = []
 
         factor = 0.0
-        step = 0.1
-        min_step = 1e-4
+        success_count = 0
 
-        last_good = copy.deepcopy(self.net)
-
+        # 1. Trace Upper Curve
         while step >= min_step:
             current_p = base_p * factor
             current_q = base_q * factor
 
-            test_net = copy.deepcopy(last_good)
-            test_net.load.loc[load_idx, 'p_mw'] = current_p
-            test_net.load.loc[load_idx, 'q_mvar'] = current_q
+            self.net.load.loc[load_idx, 'p_mw'] = current_p
+            self.net.load.loc[load_idx, 'q_mvar'] = current_q
 
             try:
-                pp.runpp(test_net, enforce_q_lims=False)
-                v_pu = test_net.res_bus.loc[target_bus_idx, 'vm_pu']
-                p_mw = test_net.load.loc[load_idx, 'p_mw']
+                pp.runpp(self.net, enforce_q_lims=False, numba=False)
+                v_pu = self.net.res_bus.loc[target_bus_idx, 'vm_pu']
+                p_mw = self.net.load.loc[load_idx, 'p_mw']
                 v_results.append(v_pu)
                 p_results.append(p_mw)
-
-                last_good = copy.deepcopy(test_net)
-                self.net = copy.deepcopy(test_net)  # Update actual network state to track success
                 factor += step
+                success_count += 1
+                if success_count >= 3:
+                    step *= 1.5
             except pp.powerflow.LoadflowNotConverged:
                 factor -= step
-                step /= 2.0
+                step /= 2.5
                 factor += step
+                success_count = 0
             except Exception:
                 factor -= step
-                step /= 2.0
+                step /= 2.5
                 factor += step
+                success_count = 0
+
+        if len(v_results) > 0:
+            v_nose = v_results[-1]
+            
+            # Restore to the last successful upper curve point to establish the nose exactly
+            last_success_factor = p_results[-1] / base_p
+            self.net.load.loc[load_idx, 'p_mw'] = base_p * last_success_factor
+            self.net.load.loc[load_idx, 'q_mvar'] = base_q * last_success_factor
+            pp.runpp(self.net, enforce_q_lims=False, numba=False)
+            
+            # 2. Trace Lower Curve
+            # Push voltages down to lower basin of attraction
+            self.net.res_bus['vm_pu'] *= 0.85 
+            
+            # Keep slack/PV bus voltages fixed to their setpoints
+            for idx in self.net.ext_grid.bus.values:
+                self.net.res_bus.loc[idx, 'vm_pu'] = self.net.ext_grid[self.net.ext_grid.bus == idx]['vm_pu'].values[0]
+            for idx in self.net.gen.bus.values:
+                self.net.res_bus.loc[idx, 'vm_pu'] = self.net.gen[self.net.gen.bus == idx]['vm_pu'].values[0]
+
+            step_lower = -step
+            factor_lower = last_success_factor + step_lower 
+            min_step_lower = min_step
+            
+            p_lower = []
+            v_lower = []
+            
+            last_good_res_bus = self.net.res_bus.copy()
+            success_count_lower = 0
+
+            while factor_lower >= 0:
+                current_p = base_p * factor_lower
+                current_q = base_q * factor_lower
+                
+                self.net.load.loc[load_idx, 'p_mw'] = current_p
+                self.net.load.loc[load_idx, 'q_mvar'] = current_q
+                
+                try:
+                    pp.runpp(self.net, enforce_q_lims=False, init="results", numba=False)
+                    v_pu = self.net.res_bus.loc[target_bus_idx, 'vm_pu']
+                    p_mw = self.net.load.loc[load_idx, 'p_mw']
+                    
+                    if v_pu >= v_nose:
+                        # Jumped back to upper curve, treat as non-convergence
+                        raise pp.powerflow.LoadflowNotConverged("Jumped to upper curve")
+                        
+                    v_lower.append(v_pu)
+                    p_lower.append(p_mw)
+                    last_good_res_bus = self.net.res_bus.copy()
+                    factor_lower += step_lower
+                    success_count_lower += 1
+                    if success_count_lower >= 3:
+                        step_lower *= 1.5
+                except pp.powerflow.LoadflowNotConverged:
+                    self.net.res_bus = last_good_res_bus.copy()
+                    factor_lower -= step_lower
+                    step_lower /= 2.5
+                    factor_lower += step_lower
+                    success_count_lower = 0
+                    if abs(step_lower) < min_step_lower:
+                        break
+                except Exception:
+                    self.net.res_bus = last_good_res_bus.copy()
+                    factor_lower -= step_lower
+                    step_lower /= 2.5
+                    factor_lower += step_lower
+                    success_count_lower = 0
+                    if abs(step_lower) < min_step_lower:
+                        break
+
+            # Append lower curve points to the results
+            p_results.extend(p_lower)
+            v_results.extend(v_lower)
 
         # Restore original load
         self.net.load.loc[load_idx, 'p_mw'] = base_p

@@ -43,9 +43,10 @@ class PVPlotWidget(QWidget):
 
         self.ax.plot(p_values, v_values, color='#00aaff', linewidth=2, marker='o', markersize=4)
 
-        # Highlight collapse point
-        collapse_p = p_values[-1]
-        collapse_v = v_values[-1]
+        # Highlight collapse point (Nose of the PV curve is the max power point)
+        max_idx = p_values.index(max(p_values))
+        collapse_p = p_values[max_idx]
+        collapse_v = v_values[max_idx]
         self.ax.plot(collapse_p, collapse_v, color='red', marker='x', markersize=10, mew=2, label="Ponto de Colapso")
 
         self.ax.set_title("Curva PV (Tensão x Potência)")
