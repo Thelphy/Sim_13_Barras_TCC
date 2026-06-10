@@ -618,6 +618,8 @@ class MainController:
     def run_simulation(self):
         self.ui.btn_simulate.setEnabled(False)
         self.ui.btn_simulate.setText("Simulando...")
+        self.ui.btn_simulate.setStyleSheet("background-color: #555555; color: #aaaaaa;")
+        self.ui.progress_bar.setVisible(True)
 
         target_bus = self.ui.combo_target_bus.currentText()
 
@@ -628,6 +630,8 @@ class MainController:
     def on_simulation_finished(self, results):
         self.ui.btn_simulate.setEnabled(True)
         self.ui.btn_simulate.setText("Iniciar Simulação")
+        self.ui.btn_simulate.setStyleSheet("")
+        self.ui.progress_bar.setVisible(False)
 
         if not results.success:
             self.ui.toast.show_toast("Erro: A simulação falhou.", False, self.ui)

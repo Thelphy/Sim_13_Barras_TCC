@@ -156,7 +156,25 @@ class GraphBusItem(QGraphicsEllipseItem):
         super().__init__(x - radius, y - radius, radius * 2, radius * 2)
         self.bus = bus
         self.diagram_view = diagram_view
-        self.setBrush(QBrush(QColor(100, 150, 255)))
+        
+        has_gen = bus.p_gen_kw > 0
+        has_load = bus.p_load_kw > 0 or bus.q_load_kvar != 0
+        
+        if has_gen and has_load:
+            from PyQt6.QtGui import QLinearGradient
+            gradient = QLinearGradient(x - radius, y, x + radius, y)
+            gradient.setColorAt(0.0, QColor("green"))
+            gradient.setColorAt(0.499, QColor("green"))
+            gradient.setColorAt(0.5, QColor("yellow"))
+            gradient.setColorAt(1.0, QColor("yellow"))
+            self.setBrush(QBrush(gradient))
+        elif has_gen:
+            self.setBrush(QBrush(QColor("green")))
+        elif has_load:
+            self.setBrush(QBrush(QColor("yellow")))
+        else:
+            self.setBrush(QBrush(QColor(100, 150, 255)))
+            
         self.setPen(QPen(Qt.GlobalColor.white))
         self.setToolTip(f"{bus.name}\nType: {bus.type}")
 
