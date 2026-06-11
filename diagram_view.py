@@ -1,9 +1,9 @@
 from PyQt6.QtWidgets import (QGraphicsView, QGraphicsScene, QGraphicsEllipseItem,
                              QGraphicsLineItem, QGraphicsTextItem, QDialog, QVBoxLayout,
                              QHBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox,
-                             QGraphicsItemGroup)
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPen, QBrush, QColor
+                             QGraphicsItemGroup, QGraphicsRectItem)
+from PyQt6.QtCore import Qt, pyqtSignal, QRectF
+from PyQt6.QtGui import QPen, QBrush, QColor, QFont
 from data_models import BusData, LineData
 
 
@@ -276,6 +276,7 @@ class NetworkDiagram(QGraphicsView):
         self.setBackgroundBrush(QBrush(QColor(30, 30, 30)))
 
         self.bus_coords = {}
+        self.result_cards = []
 
     def draw_network(self, system_state):
         self.state = system_state
@@ -328,3 +329,48 @@ class NetworkDiagram(QGraphicsView):
             text.setDefaultTextColor(Qt.GlobalColor.white)
             text.setPos(x - bus_radius, y + bus_radius)
             self.scene.addItem(text)
+
+    def update_results_cards(self, bus_results):
+        # Clear existing cards
+        for card in self.result_cards:
+            self.scene.removeItem(card)
+        self.result_cards.clear()
+
+        # Create new cards based on results
+        # bus_results format: ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
+        for row in bus_results:
+            bus_name = row[0]
+            v_pu = row[1]
+            p_mw = row[3]
+            q_mvar = row[4]
+
+            # Find bus coordinates based on name
+            bus_id = None
+            for b_id, bus in self.state.buses.items():
+                if bus.name == bus_name:
+                    bus_id = b_id
+                    break
+
+            if bus_id and bus_id in self.bus_coords:
+                x, y = self.bus_coords[bus_id]
+
+                # Create a card (QGraphicsItemGroup)
+                card_group = QGraphicsItemGroup()
+
+                text_item = QGraphicsTextItem(f"V: {v_pu} pu\nP: {p_mw} MW\nQ: {q_mvar} MVAr")
+                text_item.setDefaultTextColor(Qt.GlobalColor.white)
+                font = QFont("Arial", 8)
+                text_item.setFont(font)
+
+                rect_item = QGraphicsRectItem(text_item.boundingRect())
+                rect_item.setBrush(QBrush(QColor(45, 45, 45, 200))) # Dark gray, slightly transparent
+                rect_item.setPen(QPen(QColor(100, 100, 100)))
+
+                card_group.addToGroup(rect_item)
+                card_group.addToGroup(text_item)
+
+                # Position at top right diagonal
+                card_group.setPos(x + 10, y - rect_item.boundingRect().height() - 10)
+
+                self.scene.addItem(card_group)
+                self.result_cards.append(card_group)

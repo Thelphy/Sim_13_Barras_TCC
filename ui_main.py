@@ -175,8 +175,6 @@ class MainWindowUI(QMainWindow):
         # Control Panel
         from PyQt6.QtWidgets import QProgressBar
         control_panel = QHBoxLayout()
-        self.lbl_target = QLabel("Barra Alvo (Curva PV):")
-        self.combo_target_bus = QComboBox()
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)
         self.progress_bar.setTextVisible(False)
@@ -184,8 +182,6 @@ class MainWindowUI(QMainWindow):
         self.progress_bar.setFixedWidth(150)
         self.btn_simulate = QPushButton("Iniciar Simulação")
 
-        control_panel.addWidget(self.lbl_target)
-        control_panel.addWidget(self.combo_target_bus)
         control_panel.addStretch()
         control_panel.addWidget(self.progress_bar)
         control_panel.addWidget(self.btn_simulate)
@@ -305,6 +301,26 @@ class MainWindowUI(QMainWindow):
         layout = QVBoxLayout(self.tab3)
         self.pv_plot = PVPlotWidget()
         layout.addWidget(self.pv_plot)
+
+        # PV Curve Control Panel
+        from PyQt6.QtWidgets import QProgressBar
+        control_panel = QHBoxLayout()
+        self.lbl_target = QLabel("Barra Alvo (Curva PV):")
+        self.combo_target_bus = QComboBox()
+        self.progress_bar_pv = QProgressBar()
+        self.progress_bar_pv.setRange(0, 0)
+        self.progress_bar_pv.setTextVisible(False)
+        self.progress_bar_pv.setVisible(False)
+        self.progress_bar_pv.setFixedWidth(150)
+        self.btn_simulate_pv = QPushButton("Gerar Curva PV")
+
+        control_panel.addWidget(self.lbl_target)
+        control_panel.addWidget(self.combo_target_bus)
+        control_panel.addStretch()
+        control_panel.addWidget(self.progress_bar_pv)
+        control_panel.addWidget(self.btn_simulate_pv)
+
+        layout.addLayout(control_panel)
 
         self.btn_export_plot = QPushButton("Exportar Gráfico")
         layout.addWidget(self.btn_export_plot)
