@@ -663,11 +663,10 @@ class MainController:
 
         modal_data = []
         if results.participation_factors:
-            for i, (bus_name, pf) in enumerate(results.participation_factors.items()):
-                eig_val = results.eigenvalues[i] if i < len(results.eigenvalues) else "-"
-                modal_data.append([bus_name, f"{eig_val}", f"{pf:.4f}"])
+            for bus_name, (dom_eig, max_pf) in results.participation_factors.items():
+                modal_data.append([bus_name, f"{dom_eig:.4f}", f"{max_pf:.4f}"])
 
-        modal_headers = ["Barra", "Autovalor (Real)", "Fator de Participação"]
+        modal_headers = ["Barra", "Autovalor Dominante", "Fator de Participação (Máx)"]
         populate_table(self.ui.table_modal_results, modal_data, modal_headers)
         
         self.adjust_table_size(self.ui.table_bus_results)

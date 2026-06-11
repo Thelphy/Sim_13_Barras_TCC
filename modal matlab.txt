@@ -1,0 +1,51 @@
+function res = analise_modal(J_R, nomes_pq, limiar_participacao)
+% =========================================================================
+%  ANALISE_MODAL — Decomposição modal da Jacobiana reduzida J_R
+%
+%  Entradas:
+%    J_R                  — Jacobiana reduzida (n_pq x n_pq)
+%    nomes_pq             — cell array com nomes das barras PQ
+%    limiar_participacao  — fator mínimo para barra ser listada (ex: 0.05)
+%
+%  Saídas:
+%    res — struct com:
+%      .lambda     — autovalores ordenados (crescente)
+%      .Phi        — autovetores à direita (colunas = modos)
+%      .Xi         — autovetores à esquerda
+%      .P          — matriz de fatores de participação (normalizada)
+%      .nomes_pq   — nomes das barras
+% =========================================================================
+
+if nargin < 3
+    limiar_participacao = 0.05;
+end
+
+n_pq = size(J_R, 1);
+
+%% Decomposição modal
+[Phi, Lambda_mat] = eig(J_R);
+lambda = diag(Lambda_mat);
+Xi     = inv(Phi).';
+
+% Ordena por autovalor real crescente (mais críticos primeiro)
+[lambda_sorted, idx] = sort(real(lambda), 'ascend');
+Phi = Phi(:, idx);
+Xi  = Xi(:, idx);
+
+%% Fatores de participação (normalizados por modo)
+P = zeros(n_pq);
+for i = 1:n_pq
+    for k = 1:n_pq
+        P(k,i) = abs(Phi(k,i) * Xi(k,i));
+    end
+    P(:,i) = P(:,i) / sum(P(:,i));
+end
+
+%% Empacota resultado
+res.lambda   = lambda_sorted;
+res.Phi      = Phi;
+res.Xi       = Xi;
+res.P        = P;
+res.nomes_pq = nomes_pq;
+
+end

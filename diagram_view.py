@@ -282,6 +282,7 @@ class NetworkDiagram(QGraphicsView):
         self.state = system_state
         self.scene.clear()
         self.bus_coords.clear()
+        self.result_cards.clear()
 
         # Hardcoded layout based on the IEEE 13 bus system image
         # x, y coordinates
@@ -333,7 +334,10 @@ class NetworkDiagram(QGraphicsView):
     def update_results_cards(self, bus_results):
         # Clear existing cards
         for card in self.result_cards:
-            self.scene.removeItem(card)
+            try:
+                self.scene.removeItem(card)
+            except RuntimeError:
+                pass
         self.result_cards.clear()
 
         # Create new cards based on results

@@ -165,42 +165,47 @@ class PowerSystemEngine:
                 J11_inv = np.linalg.inv(J11)
                 JR = J22 - J21.dot(J11_inv).dot(J12)
 
-                eigenvalues, eigenvectors = eig(JR)
+                eigenvalues, vl, vr = eig(JR, left=True, right=True)
                 real_eigenvalues = eigenvalues.real
 
                 # Sort ascending
-                idx_sort = np.argsort(real_eigenvalues)
+                idx_sort = np.argsort(real_eigenvalues, kind='stable')
                 real_eigenvalues = real_eigenvalues[idx_sort]
-                eigenvectors = eigenvectors[:, idx_sort]
+                
+                vl = vl[:, idx_sort]
+                vr = vr[:, idx_sort]
 
                 self.results.eigenvalues = real_eigenvalues.tolist()
 
-                # Calculate participation factors for the smallest eigenvalue
                 if len(real_eigenvalues) > 0:
-                    min_eig_idx = 0
-                    right_eigenvector = eigenvectors[:, min_eig_idx]
-
-                    e0 = np.zeros(eigenvectors.shape[0])
-                    e0[min_eig_idx] = 1.0
-                    left_eigenvector = np.linalg.solve(eigenvectors.T, e0)
-
-                    participation = np.abs(right_eigenvector * left_eigenvector)
-                    # Normalize
-                    if np.sum(participation) > 0:
-                        participation = participation / np.sum(participation)
+                    # Calculate participation factors for all modes
+                    # vr has columns as right eigenvectors, vl has columns as left eigenvectors
+                    # We compute the full P matrix: P[bus_idx, mode_idx]
+                    P_matrix = np.abs(vr * vl.conj())
+                    
+                    # Normalize each column (mode) to sum to 1
+                    col_sums = np.sum(P_matrix, axis=0)
+                    col_sums[col_sums == 0] = 1.0  # avoid division by zero
+                    P_matrix = P_matrix / col_sums
 
                     bus_lookup = self.net._pd2ppc_lookups["bus"]
 
                     part_factors = {}
-                    for i, p in enumerate(participation):
-                        ppc_bus_idx = pq[i]
+                    # For each bus, find the mode that it participates in the most
+                    for k in range(n_pq):
+                        ppc_bus_idx = pq[k]
                         net_bus_idx = np.where(bus_lookup == ppc_bus_idx)[0][0]
                         bus_name = self.net.bus.loc[net_bus_idx, 'name']
-                        part_factors[bus_name] = p
+                        
+                        dom_mode_idx = np.argmax(P_matrix[k, :])
+                        max_pf = P_matrix[k, dom_mode_idx]
+                        dom_eig = real_eigenvalues[dom_mode_idx]
+                        
+                        part_factors[bus_name] = (dom_eig, max_pf)
 
                     self.results.participation_factors = part_factors
-        except Exception:
-            print("Modal analysis failed: An unexpected error occurred.")
+        except Exception as e:
+            print(f"Modal analysis failed: {e}")
 
     def generate_pv_curve(self, target_bus_name: str):
         if not self.results.success:

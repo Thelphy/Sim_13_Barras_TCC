@@ -175,6 +175,10 @@ class MainWindowUI(QMainWindow):
         # Control Panel
         from PyQt6.QtWidgets import QProgressBar
         control_panel = QHBoxLayout()
+        
+        lbl_authors = QLabel("Desenvolvido por Lucas Albuquerque e Lucas Kossar")
+        lbl_authors.setStyleSheet("color: #aaaaaa; font-style: italic;")
+        
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 0)
         self.progress_bar.setTextVisible(False)
@@ -182,6 +186,7 @@ class MainWindowUI(QMainWindow):
         self.progress_bar.setFixedWidth(150)
         self.btn_simulate = QPushButton("Iniciar Simulação")
 
+        control_panel.addWidget(lbl_authors)
         control_panel.addStretch()
         control_panel.addWidget(self.progress_bar)
         control_panel.addWidget(self.btn_simulate)
@@ -282,7 +287,7 @@ class MainWindowUI(QMainWindow):
         # Modal Analysis Results
         widget_modal = QWidget()
         layout_modal = QVBoxLayout(widget_modal)
-        layout_modal.addWidget(QLabel("Análise Modal (Menores Autovalores / Fatores de Participação)"))
+        layout_modal.addWidget(QLabel("Análise Modal (Autovalores Dominantes / Fatores de Participação)"))
         self.table_modal_results = QTableWidget()
         layout_modal.addWidget(self.table_modal_results)
 
