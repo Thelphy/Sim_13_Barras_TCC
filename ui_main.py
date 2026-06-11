@@ -254,8 +254,10 @@ class MainWindowUI(QMainWindow):
         btn_layout.addWidget(self.btn_import_params)
 
         self.btn_save_scenario = QPushButton("Salvar Cenário")
+        self.btn_rename_scenario = QPushButton("Renomear Cenário")
         self.btn_delete_scenario = QPushButton("Excluir Cenário")
         btn_layout.addWidget(self.btn_save_scenario)
+        btn_layout.addWidget(self.btn_rename_scenario)
         btn_layout.addWidget(self.btn_delete_scenario)
 
         self.btn_save_params = QPushButton("Salvar Alterações")
