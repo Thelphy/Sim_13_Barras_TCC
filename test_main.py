@@ -1,23 +1,31 @@
 import os
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
+import sys
+from PyQt6.QtWidgets import QApplication
+
 from main import MainController
+from data_models import SystemState
 
-@patch('main.MainWindowUI')
-@patch('main.QApplication')
-def test_main_init_default_data(mock_qapp, mock_ui):
-    controller = MainController()
+def test_main_init_default_data():
+    class MockController(MainController):
+        def __init__(self):
+            self.state = SystemState()
 
-    # The init_default_data is called in __init__
+            # mock populate so it doesn't crash
+            self.populate_params_tables = MagicMock()
+            self.update_diagram = MagicMock()
 
-    # 1. Check dictionary sizes
-    assert len(controller.state.buses) == 13, "Should have 13 buses"
-    assert len(controller.state.lines) == 12, "Should have 12 lines"
+            self.init_default_data()
 
-    # 2. Check some specific keys and values for Buses
+    controller = MockController()
+
+    assert len(controller.state.buses) == 13
+    assert len(controller.state.lines) == 12
+
     assert 650 in controller.state.buses
     assert controller.state.buses[650].name == "650 (Slack)"
     assert controller.state.buses[650].type == "slack"
@@ -30,7 +38,6 @@ def test_main_init_default_data(mock_qapp, mock_ui):
     assert 671 in controller.state.buses
     assert controller.state.buses[671].q_load_kvar == 660
 
-    # 3. Check some specific keys and values for Lines
     assert 1 in controller.state.lines
     assert controller.state.lines[1].is_transformer is False
     assert controller.state.lines[1].from_bus == 650

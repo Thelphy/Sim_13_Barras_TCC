@@ -21,6 +21,22 @@ def safe_float(val_str):
 class SimulationThread(QThread):
     finished = pyqtSignal(object)
 
+    def __init__(self, state):
+        super().__init__()
+        self.state = state
+
+    def run(self):
+        engine = PowerSystemEngine()
+        engine.build_network(self.state)
+        engine.run_power_flow()
+
+        if engine.results.success:
+            engine.run_modal_analysis()
+        self.finished.emit(engine.results)
+
+class PVCurveThread(QThread):
+    finished = pyqtSignal(object)
+
     def __init__(self, state, target_bus):
         super().__init__()
         self.state = state
@@ -31,9 +47,6 @@ class SimulationThread(QThread):
         engine.build_network(self.state)
         engine.run_power_flow()
 
-        
-        if engine.results.success:
-            engine.run_modal_analysis()
         if self.target_bus:
             engine.generate_pv_curve(self.target_bus)
         self.finished.emit(engine.results)
@@ -272,6 +285,7 @@ class MainController:
 
     def setup_connections(self):
         self.ui.btn_simulate.clicked.connect(self.run_simulation)
+        self.ui.btn_simulate_pv.clicked.connect(self.run_pv_simulation)
         self.ui.diagram_view.data_updated.connect(self.on_diagram_data_updated)
         self.ui.btn_save_params.clicked.connect(self.save_params)
         self.ui.btn_export_params.clicked.connect(self.export_params)
@@ -621,9 +635,7 @@ class MainController:
         self.ui.btn_simulate.setStyleSheet("background-color: #555555; color: #aaaaaa;")
         self.ui.progress_bar.setVisible(True)
 
-        target_bus = self.ui.combo_target_bus.currentText()
-
-        self.thread = SimulationThread(self.state, target_bus)
+        self.thread = SimulationThread(self.state)
         self.thread.finished.connect(self.on_simulation_finished)
         self.thread.start()
 
@@ -643,6 +655,9 @@ class MainController:
         bus_headers = ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
         populate_table(self.ui.table_bus_results, results.bus_results, bus_headers)
 
+        # Update Floating Cards
+        self.ui.diagram_view.update_results_cards(results.bus_results)
+
         line_headers = ["Linha", "P_in (MW)", "Q_in (MVAr)", "P_out (MW)", "Q_out (MVAr)", "Perda (MW)", "Carga (%)"]
         populate_table(self.ui.table_line_results, results.line_results, line_headers)
 
@@ -658,6 +673,30 @@ class MainController:
         self.adjust_table_size(self.ui.table_bus_results)
         self.adjust_table_size(self.ui.table_line_results)
         self.adjust_table_size(self.ui.table_modal_results)
+
+    def run_pv_simulation(self):
+        self.ui.btn_simulate_pv.setEnabled(False)
+        self.ui.btn_simulate_pv.setText("Gerando...")
+        self.ui.btn_simulate_pv.setStyleSheet("background-color: #555555; color: #aaaaaa;")
+        self.ui.progress_bar_pv.setVisible(True)
+
+        target_bus = self.ui.combo_target_bus.currentText()
+
+        self.pv_thread = PVCurveThread(self.state, target_bus)
+        self.pv_thread.finished.connect(self.on_pv_simulation_finished)
+        self.pv_thread.start()
+
+    def on_pv_simulation_finished(self, results):
+        self.ui.btn_simulate_pv.setEnabled(True)
+        self.ui.btn_simulate_pv.setText("Gerar Curva PV")
+        self.ui.btn_simulate_pv.setStyleSheet("")
+        self.ui.progress_bar_pv.setVisible(False)
+
+        if not results.success:
+            self.ui.toast.show_toast("Erro: A geração da curva PV falhou.", False, self.ui)
+            return
+
+        self.ui.toast.show_toast("Curva PV gerada com sucesso!", True, self.ui)
 
         # Update Plot
         target_bus = self.ui.combo_target_bus.currentText()

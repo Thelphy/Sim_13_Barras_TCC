@@ -41,12 +41,17 @@ class PVPlotWidget(QWidget):
             self.canvas.draw()
             return
 
-        self.ax.plot(p_values, v_values, color='#00aaff', linewidth=2, marker='o', markersize=4)
+        # Sort values based on v_values descending to trace upper then lower continuous curve
+        combined = sorted(zip(v_values, p_values), key=lambda x: x[0], reverse=True)
+        v_sorted = [x[0] for x in combined]
+        p_sorted = [x[1] for x in combined]
+
+        self.ax.plot(p_sorted, v_sorted, color='#00aaff', linewidth=2, marker='o', markersize=4)
 
         # Highlight collapse point (Nose of the PV curve is the max power point)
-        max_idx = p_values.index(max(p_values))
-        collapse_p = p_values[max_idx]
-        collapse_v = v_values[max_idx]
+        max_idx = p_sorted.index(max(p_sorted))
+        collapse_p = p_sorted[max_idx]
+        collapse_v = v_sorted[max_idx]
         self.ax.plot(collapse_p, collapse_v, color='red', marker='x', markersize=10, mew=2, label="Ponto de Colapso")
 
         title = f"Curva PV (Tensão x Potência) - Barra {target_bus_name}" if target_bus_name else "Curva PV (Tensão x Potência)"
