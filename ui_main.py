@@ -116,7 +116,7 @@ class MainWindowUI(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Simulador SEP - 13 Barras")
+        self.setWindowTitle("TCC Lucass 13 Bus")
         self.resize(1000, 700)
 
         # Load window geometry

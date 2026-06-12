@@ -1,6 +1,9 @@
 import sys
 import math
 import json
+import os
+import ctypes
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem, QFileDialog
 from openpyxl import Workbook, load_workbook
 from PyQt6.QtCore import QThread, pyqtSignal, Qt, QSettings
@@ -9,6 +12,16 @@ from data_models import SystemState, BusData, LineData, CableConfig
 from ui_main import MainWindowUI
 from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 def safe_float(val_str):
     if isinstance(val_str, str):
@@ -53,8 +66,15 @@ class PVCurveThread(QThread):
 
 class MainController:
     def __init__(self):
+        # Set AppUserModelID for Windows taskbar icon
+        if sys.platform == 'win32':
+            myappid = 'tcc.ll.13bus.1.0' # arbitrary string
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+            
         self.app = QApplication(sys.argv)
+        self.app.setWindowIcon(QIcon(resource_path("Logo.png")))
         self.ui = MainWindowUI()
+        self.ui.setWindowIcon(QIcon(resource_path("Logo.png")))
         self.state = SystemState()
         self.scenarios = {}
 
@@ -156,7 +176,7 @@ class MainController:
 
     def load_scenarios(self):
         default_scenarios = {
-            "TCC CARAS": {"buses": {"650": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "632": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "645": {"p_load_kw": 170.0, "q_load_kvar": 125.0, "p_gen_kw": 0.0}, "646": {"p_load_kw": 230.0, "q_load_kvar": 132.0, "p_gen_kw": 0.0}, "633": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "634": {"p_load_kw": 340.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "671": {"p_load_kw": 1155.0, "q_load_kvar": 660.0, "p_gen_kw": 0.0}, "684": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "611": {"p_load_kw": 170.0, "q_load_kvar": -220.0, "p_gen_kw": 0.0}, "652": {"p_load_kw": 128.0, "q_load_kvar": 86.0, "p_gen_kw": 0.0}, "692": {"p_load_kw": 170.0, "q_load_kvar": 151.0, "p_gen_kw": 0.0}, "675": {"p_load_kw": 843.0, "q_load_kvar": -138.0, "p_gen_kw": 0.0}, "680": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}}, "lines": {"1": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "2": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "3": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "4": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "5": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 0.5, "vk_percent": 4.0, "vkr_percent": 1.0, "pfe_kw": 0.0, "i0_percent": 0.5}, "6": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "7": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "8": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "9": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.2438, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "10": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "11": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "12": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.3048, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}}},
+            "TCC Ref": {"buses": {"650": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "632": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "645": {"p_load_kw": 170.0, "q_load_kvar": 125.0, "p_gen_kw": 0.0}, "646": {"p_load_kw": 230.0, "q_load_kvar": 132.0, "p_gen_kw": 0.0}, "633": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "634": {"p_load_kw": 340.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "671": {"p_load_kw": 1155.0, "q_load_kvar": 660.0, "p_gen_kw": 0.0}, "684": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "611": {"p_load_kw": 170.0, "q_load_kvar": -220.0, "p_gen_kw": 0.0}, "652": {"p_load_kw": 128.0, "q_load_kvar": 86.0, "p_gen_kw": 0.0}, "692": {"p_load_kw": 170.0, "q_load_kvar": 151.0, "p_gen_kw": 0.0}, "675": {"p_load_kw": 843.0, "q_load_kvar": -138.0, "p_gen_kw": 0.0}, "680": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}}, "lines": {"1": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "2": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "3": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "4": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "5": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 0.5, "vk_percent": 4.0, "vkr_percent": 1.0, "pfe_kw": 0.0, "i0_percent": 0.5}, "6": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "7": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "8": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "9": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.2438, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "10": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "11": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "12": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.3048, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}}},
             "Cenário Base": {"buses": {"650": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "632": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "645": {"p_load_kw": 200.0, "q_load_kvar": 95.0, "p_gen_kw": 0.0}, "646": {"p_load_kw": 250.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "633": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "634": {"p_load_kw": 300.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "671": {"p_load_kw": 800.0, "q_load_kvar": 380.0, "p_gen_kw": 0.0}, "684": {"p_load_kw": 350.0, "q_load_kvar": 170.0, "p_gen_kw": 0.0}, "611": {"p_load_kw": 250.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "652": {"p_load_kw": 150.0, "q_load_kvar": 70.0, "p_gen_kw": 0.0}, "692": {"p_load_kw": 170.0, "q_load_kvar": 80.0, "p_gen_kw": 0.0}, "675": {"p_load_kw": 450.0, "q_load_kvar": 210.0, "p_gen_kw": 0.0}, "680": {"p_load_kw": 500.0, "q_load_kvar": 240.0, "p_gen_kw": 0.0}}, "lines": {"1": {"r_ohm_per_km": 0.17, "x_ohm_per_km": 0.36, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "2": {"r_ohm_per_km": 0.88, "x_ohm_per_km": 0.42, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "3": {"r_ohm_per_km": 0.88, "x_ohm_per_km": 0.42, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "4": {"r_ohm_per_km": 0.27, "x_ohm_per_km": 0.38, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "5": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 0.5, "vk_percent": 4.0, "vkr_percent": 1.0, "pfe_kw": 0.0, "i0_percent": 0.5}, "6": {"r_ohm_per_km": 0.17, "x_ohm_per_km": 0.36, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "7": {"r_ohm_per_km": 0.27, "x_ohm_per_km": 0.38, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "8": {"r_ohm_per_km": 0.88, "x_ohm_per_km": 0.42, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "9": {"r_ohm_per_km": 0.88, "x_ohm_per_km": 0.42, "length_km": 0.2438, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "10": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "11": {"r_ohm_per_km": 0.27, "x_ohm_per_km": 0.38, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "12": {"r_ohm_per_km": 0.17, "x_ohm_per_km": 0.36, "length_km": 0.3048, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}}}
         }
 
