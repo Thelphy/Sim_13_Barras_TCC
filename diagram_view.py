@@ -73,7 +73,7 @@ class LineDialog(QDialog):
         
         self.combo_cable.currentTextChanged.connect(self.on_cable_changed)
         
-        # Try to select the correct cable initially
+        # Tentar selecionar o cabo correto inicialmente
         if self.diagram_view and hasattr(self.diagram_view, 'state'):
             for c_name, c_data in self.diagram_view.state.cables.items():
                 if abs(c_data.r_ohm_per_km - line.r_ohm_per_km) < 1e-4 and abs(c_data.x_ohm_per_km - line.x_ohm_per_km) < 1e-4:
@@ -205,16 +205,16 @@ class GraphTrafoItem(QGraphicsItemGroup):
         self.diagram_view = diagram_view
         self.setToolTip(f"Trafo {line.id}")
 
-        # Draw a line from (x1,y1) to (x2,y2) but interrupted by two circles in the middle
+        # Desenhar uma linha de (x1,y1) até (x2,y2) mas interrompida por dois círculos no meio
         mx = (x1 + x2) / 2
         my = (y1 + y2) / 2
 
-        # Draw two intersecting circles
+        # Desenhar dois círculos que se interceptam
         r = 10
         pen = QPen(QColor(200, 200, 200))
         pen.setWidth(2)
 
-        # Calculate angle of the line
+        # Calcular o ângulo da linha
         import math
         dx = x2 - x1
         dy = y2 - y1
@@ -226,7 +226,7 @@ class GraphTrafoItem(QGraphicsItemGroup):
         ux = dx / length
         uy = dy / length
 
-        # Centers for the two circles
+        # Centros dos dois círculos
         cx1 = mx - ux * (r - 2)
         cy1 = my - uy * (r - 2)
 
@@ -238,10 +238,10 @@ class GraphTrafoItem(QGraphicsItemGroup):
 
         c1.setPen(pen)
         c2.setPen(pen)
-        c1.setBrush(QBrush(QColor(30, 30, 30))) # Match background
+        c1.setBrush(QBrush(QColor(30, 30, 30))) # Corresponder ao fundo
         c2.setBrush(QBrush(QColor(30, 30, 30)))
 
-        # Lines from endpoints to the edge of the circles
+        # Linhas dos pontos extremos até a borda dos círculos
         l1_end_x = cx1 - ux * r
         l1_end_y = cy1 - uy * r
 
@@ -284,8 +284,8 @@ class NetworkDiagram(QGraphicsView):
         self.bus_coords.clear()
         self.result_cards.clear()
 
-        # Hardcoded layout based on the IEEE 13 bus system image
-        # x, y coordinates
+        # Layout codificado com base na imagem do sistema IEEE de 13 barras
+        # coordenadas x, y
         coords = {
             650: (400, 100),
             632: (400, 200),
@@ -306,9 +306,9 @@ class NetworkDiagram(QGraphicsView):
             if bus_id in coords:
                 self.bus_coords[bus_id] = coords[bus_id]
             else:
-                self.bus_coords[bus_id] = (400, 300) # fallback
+                self.bus_coords[bus_id] = (400, 300) # alternativa
 
-        # Draw lines
+        # Desenhar linhas
         for line_id, line in system_state.lines.items():
             if line.from_bus in self.bus_coords and line.to_bus in self.bus_coords:
                 x1, y1 = self.bus_coords[line.from_bus]
@@ -319,7 +319,7 @@ class NetworkDiagram(QGraphicsView):
                     item = GraphLineItem(x1, y1, x2, y2, line, self)
                 self.scene.addItem(item)
 
-        # Draw buses (after lines so they appear on top)
+        # Desenhar barras (após as linhas para que apareçam por cima)
         bus_radius = 15
         for bus_id, bus in system_state.buses.items():
             x, y = self.bus_coords[bus_id]
@@ -332,7 +332,7 @@ class NetworkDiagram(QGraphicsView):
             self.scene.addItem(text)
 
     def update_results_cards(self, bus_results):
-        # Clear existing cards
+        # Limpar cartões existentes
         for card in self.result_cards:
             try:
                 self.scene.removeItem(card)
@@ -340,15 +340,15 @@ class NetworkDiagram(QGraphicsView):
                 pass
         self.result_cards.clear()
 
-        # Create new cards based on results
-        # bus_results format: ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
+        # Criar novos cartões baseados nos resultados
+        # formato bus_results: ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
         for row in bus_results:
             bus_name = row[0]
             v_pu = row[1]
             p_mw = row[3]
             q_mvar = row[4]
 
-            # Find bus coordinates based on name
+            # Encontrar as coordenadas da barra com base no nome
             bus_id = None
             for b_id, bus in self.state.buses.items():
                 if bus.name == bus_name:
@@ -358,7 +358,7 @@ class NetworkDiagram(QGraphicsView):
             if bus_id and bus_id in self.bus_coords:
                 x, y = self.bus_coords[bus_id]
 
-                # Create a card (QGraphicsItemGroup)
+                # Criar um cartão (QGraphicsItemGroup)
                 card_group = QGraphicsItemGroup()
 
                 text_item = QGraphicsTextItem(f"V: {v_pu} pu\nP: {p_mw} MW\nQ: {q_mvar} MVAr")
@@ -367,13 +367,13 @@ class NetworkDiagram(QGraphicsView):
                 text_item.setFont(font)
 
                 rect_item = QGraphicsRectItem(text_item.boundingRect())
-                rect_item.setBrush(QBrush(QColor(45, 45, 45, 200))) # Dark gray, slightly transparent
+                rect_item.setBrush(QBrush(QColor(45, 45, 45, 200))) # Cinza escuro, levemente transparente
                 rect_item.setPen(QPen(QColor(100, 100, 100)))
 
                 card_group.addToGroup(rect_item)
                 card_group.addToGroup(text_item)
 
-                # Position at top right diagonal
+                # Posicionar na diagonal superior direita
                 card_group.setPos(x + 10, y - rect_item.boundingRect().height() - 10)
 
                 self.scene.addItem(card_group)

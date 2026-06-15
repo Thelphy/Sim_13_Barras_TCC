@@ -14,9 +14,9 @@ from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
+    """ Obtém o caminho absoluto para o recurso, funciona para dev e para PyInstaller """
     try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        # PyInstaller cria uma pasta temporária e armazena o caminho em _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
@@ -43,8 +43,6 @@ class SimulationThread(QThread):
         engine.build_network(self.state)
         engine.run_power_flow()
 
-        if engine.results.success:
-            engine.run_modal_analysis()
         self.finished.emit(engine.results)
 
 class PVCurveThread(QThread):
@@ -66,9 +64,9 @@ class PVCurveThread(QThread):
 
 class MainController:
     def __init__(self):
-        # Set AppUserModelID for Windows taskbar icon
+        # Definir AppUserModelID para ícone da barra de tarefas do Windows
         if sys.platform == 'win32':
-            myappid = 'tcc.ll.13bus.1.0' # arbitrary string
+            myappid = 'tcc.ll.13bus.1.0' # string arbitrária
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
             
         self.app = QApplication(sys.argv)
@@ -83,7 +81,7 @@ class MainController:
         self.load_scenarios()
         self.setup_connections()
 
-        # Initial draw
+        # Desenho inicial
         self.update_diagram()
         self.populate_params_tables()
         self.populate_target_combo()
@@ -93,7 +91,7 @@ class MainController:
     def save_settings(self):
         settings = QSettings("SimuladorSEP", "Parametros")
 
-        # Save buses
+        # Salvar barras
         buses_data = {}
         for bus_id, bus in self.state.buses.items():
             buses_data[bus_id] = {
@@ -103,7 +101,7 @@ class MainController:
             }
         settings.setValue("buses", json.dumps(buses_data))
 
-        # Save lines
+        # Salvar linhas
         lines_data = {}
         for line_id, line in self.state.lines.items():
             lines_data[line_id] = {
@@ -118,7 +116,7 @@ class MainController:
             }
         settings.setValue("lines", json.dumps(lines_data))
 
-        # Save cables
+        # Salvar cabos
         cables_data = {}
         for c_name, cable in self.state.cables.items():
             cables_data[c_name] = {
@@ -242,7 +240,7 @@ class MainController:
         name, ok = QInputDialog.getText(self.ui, "Salvar Cenário", "Nome do Cenário:")
         if ok and name.strip():
             name = name.strip()
-            # Serialize current parameters
+            # Serializar parâmetros atuais
             buses_data = {}
             for bus_id, bus in self.state.buses.items():
                 buses_data[bus_id] = {
@@ -294,14 +292,14 @@ class MainController:
                 if new_name in self.scenarios:
                     QMessageBox.warning(self.ui, "Erro", "Já existe um cenário com esse nome.")
                     return
-                # Replace the key
+                # Substituir a chave
                 scenario_data = self.scenarios.pop(item)
                 self.scenarios[new_name] = scenario_data
                 self.save_scenarios()
                 self.ui.toast.show_toast(f"Cenário renomeado para '{new_name}'!", True, self.ui)
 
     def init_default_data(self):
-        # 13 Bus system based on IEEE 13 Node Test Feeder layout
+        # Sistema de 13 barras baseado no layout do IEEE 13 Node Test Feeder
         self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=13.8, type='slack', v_target_pu=1.0)
         self.state.buses[632] = BusData(id=632, name="632", vn_kv=13.8, type='pq', p_load_kw=0, q_load_kvar=0)
         self.state.buses[645] = BusData(id=645, name="645", vn_kv=13.8, type='pq', p_load_kw=170, q_load_kvar=125)
@@ -316,7 +314,7 @@ class MainController:
         self.state.buses[675] = BusData(id=675, name="675", vn_kv=13.8, type='pq', p_load_kw=843, q_load_kvar=-138)
         self.state.buses[680] = BusData(id=680, name="680", vn_kv=13.8, type='pq', p_load_kw=0, q_load_kvar=0)
 
-        # Connect the buses
+        # Conectar as barras
         # (id, from, to, length, r, x)
         self.state.lines[1] = LineData(1, 650, 632, 0.6096, 0.1155, 0.371, is_transformer=False)
         self.state.lines[2] = LineData(2, 632, 645, 0.1524, 0.3679, 0.4726)
@@ -327,7 +325,7 @@ class MainController:
         self.state.lines[7] = LineData(7, 671, 684, 0.0914, 0.3679, 0.4726)
         self.state.lines[8] = LineData(8, 684, 611, 0.0914, 0.3679, 0.4726)
         self.state.lines[9] = LineData(9, 684, 652, 0.2438, 0.3679, 0.4726)
-        self.state.lines[10] = LineData(10, 671, 692, 0.01, 0.01, 0.01) # switch (avoid divide by zero and ill-conditioning)
+        self.state.lines[10] = LineData(10, 671, 692, 0.01, 0.01, 0.01) # chave (evitar divisão por zero e mau condicionamento)
         self.state.lines[11] = LineData(11, 692, 675, 0.1524, 0.3679, 0.4726)
         self.state.lines[12] = LineData(12, 671, 680, 0.3048, 0.1155, 0.371)
 
@@ -377,7 +375,7 @@ class MainController:
 
     def populate_params_tables(self):
         from PyQt6.QtWidgets import QTableWidgetItem
-        # Populate Cables
+        # Preencher Cabos
         self.ui.table_cables.setRowCount(len(self.state.cables))
         self.ui.table_cables.setColumnCount(3)
         self.ui.table_cables.setHorizontalHeaderLabels(["Nome", "R (ohm/km)", "X (ohm/km)"])
@@ -386,7 +384,7 @@ class MainController:
             self.ui.table_cables.setItem(i, 1, QTableWidgetItem(str(cable.r_ohm_per_km)))
             self.ui.table_cables.setItem(i, 2, QTableWidgetItem(str(cable.x_ohm_per_km)))
 
-        # Populate Buses
+        # Preencher Barras
         self.ui.table_params_buses.setRowCount(len(self.state.buses))
         self.ui.table_params_buses.setColumnCount(4)
         self.ui.table_params_buses.setHorizontalHeaderLabels(["ID", "P Load (kW)", "Q Load (kVAr)", "Geração (kW)"])
@@ -396,7 +394,7 @@ class MainController:
             self.ui.table_params_buses.setItem(i, 2, QTableWidgetItem(str(bus.q_load_kvar)))
             self.ui.table_params_buses.setItem(i, 3, QTableWidgetItem(str(bus.p_gen_kw)))
 
-        # Populate Lines
+        # Preencher Linhas
         from PyQt6.QtWidgets import QComboBox
         normal_lines = [l for l in self.state.lines.values() if not l.is_transformer]
         self.ui.table_params_lines.setRowCount(len(normal_lines))
@@ -415,13 +413,13 @@ class MainController:
             for c_name in self.state.cables.keys():
                 combo.addItem(c_name)
             
-            # Select correct cable if matches
+            # Selecionar o cabo correto se houver correspondência
             for c_name, c_data in self.state.cables.items():
                 if abs(c_data.r_ohm_per_km - line.r_ohm_per_km) < 1e-4 and abs(c_data.x_ohm_per_km - line.x_ohm_per_km) < 1e-4:
                     combo.setCurrentText(c_name)
                     break
             
-            # Connect
+            # Conectar
             def on_cable_selected(text, row=i):
                 if text in self.state.cables:
                     c = self.state.cables[text]
@@ -431,7 +429,7 @@ class MainController:
             combo.currentTextChanged.connect(on_cable_selected)
             self.ui.table_params_lines.setCellWidget(i, 4, combo)
 
-        # Populate Transformers
+        # Preencher Transformadores
         trafos = [l for l in self.state.lines.values() if l.is_transformer]
         self.ui.table_params_trafos.setRowCount(len(trafos))
         self.ui.table_params_trafos.setColumnCount(6)
@@ -622,7 +620,7 @@ class MainController:
             wb = Workbook()
             ws = wb.active
 
-            # Export Bus Results
+            # Exportar Resultados das Barras
             ws.append(["[Fluxo de Potência (Tensões Nodais)]"])
             headers = []
             for j in range(self.ui.table_bus_results.columnCount()):
@@ -637,7 +635,7 @@ class MainController:
                 ws.append(row_data)
             ws.append([])
 
-            # Export Line Results
+            # Exportar Resultados das Linhas
             ws.append(["[Fluxo nas Linhas]"])
             headers = []
             for j in range(self.ui.table_line_results.columnCount()):
@@ -648,21 +646,6 @@ class MainController:
                 row_data = []
                 for j in range(self.ui.table_line_results.columnCount()):
                     item = self.ui.table_line_results.item(i, j)
-                    row_data.append(item.text() if item else "")
-                ws.append(row_data)
-            ws.append([])
-
-            # Export Modal Analysis Results
-            ws.append(["[Análise Modal]"])
-            headers = []
-            for j in range(self.ui.table_modal_results.columnCount()):
-                headers.append(self.ui.table_modal_results.horizontalHeaderItem(j).text())
-            ws.append(headers)
-
-            for i in range(self.ui.table_modal_results.rowCount()):
-                row_data = []
-                for j in range(self.ui.table_modal_results.columnCount()):
-                    item = self.ui.table_modal_results.item(i, j)
                     row_data.append(item.text() if item else "")
                 ws.append(row_data)
 
@@ -702,27 +685,18 @@ class MainController:
 
         self.ui.toast.show_toast("Simulação concluída com sucesso!", True, self.ui)
 
-        # Update UI Tables
+        # Atualizar Tabelas da UI
         bus_headers = ["Barra", "V (PU)", "Ângulo (°)", "P (MW)", "Q (MVAr)"]
         populate_table(self.ui.table_bus_results, results.bus_results, bus_headers)
 
-        # Update Floating Cards
+        # Atualizar Cartões Flutuantes
         self.ui.diagram_view.update_results_cards(results.bus_results)
 
         line_headers = ["Linha", "P_in (MW)", "Q_in (MVAr)", "P_out (MW)", "Q_out (MVAr)", "Perda (MW)", "Carga (%)"]
         populate_table(self.ui.table_line_results, results.line_results, line_headers)
-
-        modal_data = []
-        if results.participation_factors:
-            for bus_name, (dom_eig, max_pf) in results.participation_factors.items():
-                modal_data.append([bus_name, f"{dom_eig:.4f}", f"{max_pf:.4f}"])
-
-        modal_headers = ["Barra", "Autovalor Dominante", "Fator de Participação (Máx)"]
-        populate_table(self.ui.table_modal_results, modal_data, modal_headers)
         
         self.adjust_table_size(self.ui.table_bus_results)
         self.adjust_table_size(self.ui.table_line_results)
-        self.adjust_table_size(self.ui.table_modal_results)
 
     def run_pv_simulation(self):
         self.ui.btn_simulate_pv.setEnabled(False)
@@ -748,7 +722,7 @@ class MainController:
 
         self.ui.toast.show_toast("Curva PV gerada com sucesso!", True, self.ui)
 
-        # Update Plot
+        # Atualizar Gráfico
         target_bus = self.ui.combo_target_bus.currentText()
         self.ui.pv_plot.plot_curve(results.pv_curve_p, results.pv_curve_v, target_bus)
 

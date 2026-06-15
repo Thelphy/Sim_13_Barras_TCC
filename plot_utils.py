@@ -11,7 +11,7 @@ class PVPlotWidget(QWidget):
         self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.canvas)
 
-        # Configure dark style for plot
+        # Configurar estilo escuro para o gráfico
         self.figure.patch.set_facecolor('#1e1e1e')
         self.ax = self.figure.add_subplot(111)
         self.ax.set_facecolor('#2d2d2d')
@@ -41,14 +41,14 @@ class PVPlotWidget(QWidget):
             self.canvas.draw()
             return
 
-        # Sort values based on v_values descending to trace upper then lower continuous curve
+        # Ordenar valores com base em v_values em ordem decrescente para traçar a curva contínua superior e depois a inferior
         combined = sorted(zip(v_values, p_values), key=lambda x: x[0], reverse=True)
         v_sorted = [x[0] for x in combined]
         p_sorted = [x[1] for x in combined]
 
         self.ax.plot(p_sorted, v_sorted, color='#00aaff', linewidth=2, marker='o', markersize=4)
 
-        # Highlight collapse point (Nose of the PV curve is the max power point)
+        # Destacar ponto de colapso (Nariz da curva PV é o ponto de potência máxima)
         max_idx = p_sorted.index(max(p_sorted))
         collapse_p = p_sorted[max_idx]
         collapse_v = v_sorted[max_idx]
