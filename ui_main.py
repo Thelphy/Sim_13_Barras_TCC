@@ -62,7 +62,9 @@ QHeaderView::section {
 }
 """
 
+# Classe que implementa uma notificação flutuante tipo 'Toast' na interface
 class ToastNotification(QWidget):
+    # Inicializa o componente de notificação Toast e seu layout
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Tool)
@@ -93,6 +95,7 @@ class ToastNotification(QWidget):
 
         self.hide()
 
+    # Função para exibir a mensagem na tela com duração definida e cor correspondente (sucesso/erro)
     def show_toast(self, message, is_success, parent_widget, duration=3000):
         self.label.setText(message)
         if is_success:
@@ -115,9 +118,11 @@ class ToastNotification(QWidget):
         self.show()
         self.timer.start(duration)
 
+# Classe principal que estrutura e define toda a interface gráfica de usuário (UI)
 class MainWindowUI(QMainWindow):
     app_closed = pyqtSignal()
 
+    # Construtor da interface principal, onde as abas e os layouts são instanciados
     def __init__(self):
         super().__init__()
         self.setWindowTitle("TCC Lucass 13 Bus")
@@ -149,6 +154,7 @@ class MainWindowUI(QMainWindow):
         self.toast = ToastNotification(self)
 
 
+    # Evento capturado ao fechar a janela para salvar as configurações de geometria
     def closeEvent(self, event):
         settings = QSettings("SimuladorSEP", "App")
         settings.setValue("geometry", self.saveGeometry())
@@ -156,6 +162,7 @@ class MainWindowUI(QMainWindow):
         self.app_closed.emit()
         super().closeEvent(event)
 
+    # Configuração da Aba 1, que contém o diagrama da rede elétrica
     def setup_tab1(self):
         self.tab1 = QWidget()
         layout = QVBoxLayout(self.tab1)
@@ -198,6 +205,7 @@ class MainWindowUI(QMainWindow):
         layout.addLayout(control_panel)
         self.tabs.addTab(self.tab1, "Principal (Diagrama)")
 
+    # Configuração da Aba de Parâmetros, que contém as tabelas de dados do sistema
     def setup_tab_params(self):
         self.tab_params = QWidget()
         layout = QVBoxLayout(self.tab_params)
@@ -270,6 +278,7 @@ class MainWindowUI(QMainWindow):
 
         self.tabs.addTab(self.tab_params, "Parâmetros")
 
+    # Configuração da Aba de Resultados, que exibe as tabelas de fluxo de potência
     def setup_tab2(self):
         self.tab2 = QWidget()
         layout = QVBoxLayout(self.tab2)
@@ -299,6 +308,7 @@ class MainWindowUI(QMainWindow):
 
         self.tabs.addTab(self.tab2, "Resultados")
 
+    # Configuração da Aba de Gráficos, focada na exibição das Curvas PV
     def setup_tab3(self):
         self.tab3 = QWidget()
         layout = QVBoxLayout(self.tab3)

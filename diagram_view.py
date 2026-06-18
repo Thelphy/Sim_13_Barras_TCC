@@ -7,7 +7,9 @@ from PyQt6.QtGui import QPen, QBrush, QColor, QFont
 from data_models import BusData, LineData
 
 
+# Classe do diálogo de edição de parâmetros de uma barra
 class BusDialog(QDialog):
+    # Construtor do diálogo de Barra
     def __init__(self, bus: BusData, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Editar Barra: {bus.name}")
@@ -29,6 +31,7 @@ class BusDialog(QDialog):
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
+    # Função que salva os novos dados da barra informados no diálogo
     def save_data(self):
         try:
             p_load = float(self.p_load_edit.text())
@@ -43,7 +46,9 @@ class BusDialog(QDialog):
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid numeric values.")
 
+# Classe do diálogo de edição de parâmetros de uma linha de transmissão
 class LineDialog(QDialog):
+    # Construtor do diálogo de Linha
     def __init__(self, line: LineData, diagram_view=None):
         super().__init__(diagram_view)
         self.setWindowTitle(f"Editar Linha: {line.id}")
@@ -80,6 +85,7 @@ class LineDialog(QDialog):
                     self.combo_cable.setCurrentText(c_name)
                     break
                     
+    # Callback executado quando o cabo é alterado no combobox
     def on_cable_changed(self, text):
         if text != "Personalizado" and self.diagram_view and hasattr(self.diagram_view, 'state'):
             if text in self.diagram_view.state.cables:
@@ -91,6 +97,7 @@ class LineDialog(QDialog):
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
+    # Função que salva os novos dados da linha informados no diálogo
     def save_data(self):
         try:
             r = float(self.r_edit.text())
@@ -105,7 +112,9 @@ class LineDialog(QDialog):
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
 
+# Classe do diálogo de edição de parâmetros de um transformador
 class TrafoDialog(QDialog):
+    # Construtor do diálogo de Transformador
     def __init__(self, line: LineData, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Edit Transformer: {line.id}")
@@ -133,6 +142,7 @@ class TrafoDialog(QDialog):
         save_btn.clicked.connect(self.save_data)
         self.layout.addWidget(save_btn)
 
+    # Função que salva os novos dados do transformador informados no diálogo
     def save_data(self):
         try:
             sn = float(self.sn_edit.text())
@@ -151,7 +161,9 @@ class TrafoDialog(QDialog):
         except ValueError:
             QMessageBox.warning(self, "Invalid Input", "Please enter valid, non-negative numeric values.")
 
+# Classe gráfica que representa visualmente uma barra no diagrama
 class GraphBusItem(QGraphicsEllipseItem):
+    # Construtor do item gráfico da barra
     def __init__(self, x, y, radius, bus: BusData, diagram_view):
         super().__init__(x - radius, y - radius, radius * 2, radius * 2)
         self.bus = bus
@@ -178,12 +190,15 @@ class GraphBusItem(QGraphicsEllipseItem):
         self.setPen(QPen(Qt.GlobalColor.white))
         self.setToolTip(f"{bus.name}\nType: {bus.type}")
 
+    # Evento acionado ao dar duplo clique no nó da barra (abre o BusDialog)
     def mouseDoubleClickEvent(self, event):
         dialog = BusDialog(self.bus, self.diagram_view)
         if dialog.exec():
             self.diagram_view.data_updated.emit()
 
+# Classe gráfica que representa visualmente uma linha de transmissão no diagrama
 class GraphLineItem(QGraphicsLineItem):
+    # Construtor do item gráfico da linha
     def __init__(self, x1, y1, x2, y2, line: LineData, diagram_view):
         super().__init__(x1, y1, x2, y2)
         self.line_data = line
@@ -193,12 +208,15 @@ class GraphLineItem(QGraphicsLineItem):
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
 
+    # Evento acionado ao dar duplo clique na linha (abre o LineDialog)
     def mouseDoubleClickEvent(self, event):
         dialog = LineDialog(self.line_data, self.diagram_view)
         if dialog.exec():
             self.diagram_view.data_updated.emit()
 
+# Classe gráfica que agrupa elementos para desenhar um transformador no diagrama
 class GraphTrafoItem(QGraphicsItemGroup):
+    # Construtor do item gráfico do transformador
     def __init__(self, x1, y1, x2, y2, line: LineData, diagram_view):
         super().__init__()
         self.line_data = line
@@ -259,15 +277,18 @@ class GraphTrafoItem(QGraphicsItemGroup):
         self.addToGroup(c1)
         self.addToGroup(c2)
 
+    # Evento acionado ao dar duplo clique no transformador (abre o TrafoDialog)
     def mouseDoubleClickEvent(self, event):
         dialog = TrafoDialog(self.line_data, self.diagram_view)
         if dialog.exec():
             self.diagram_view.data_updated.emit()
 
 
+# Classe responsável por gerenciar e visualizar a malha / diagrama da rede
 class NetworkDiagram(QGraphicsView):
     data_updated = pyqtSignal()
 
+    # Construtor do visualizador do diagrama
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
@@ -278,6 +299,7 @@ class NetworkDiagram(QGraphicsView):
         self.bus_coords = {}
         self.result_cards = []
 
+    # Função que redesenha o diagrama na cena a partir do estado do sistema atual
     def draw_network(self, system_state):
         self.state = system_state
         self.scene.clear()
@@ -332,6 +354,7 @@ class NetworkDiagram(QGraphicsView):
             text.setPos(x - bus_radius, y + bus_radius)
             self.scene.addItem(text)
 
+    # Função que adiciona as etiquetas/cartões flutuantes com resultados de tensão no diagrama
     def update_results_cards(self, bus_results):
         # Limpar cartões existentes
         for card in self.result_cards:

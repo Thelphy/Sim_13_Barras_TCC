@@ -2,6 +2,7 @@ import os
 import subprocess
 import shutil
 
+# Função responsável por realizar o build da aplicação usando o PyInstaller
 def build_app():
     print("Iniciando a criação do executável do TCC Lucass 13 Bus...")
     

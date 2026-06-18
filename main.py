@@ -13,6 +13,7 @@ from ui_main import MainWindowUI
 from engine_sep import PowerSystemEngine
 from plot_utils import populate_table
 
+# Função para obter o caminho absoluto dos recursos (imagens) de forma compatível com PyInstaller
 def resource_path(relative_path):
     """ Obtém o caminho absoluto para o recurso, funciona para dev e para PyInstaller """
     try:
@@ -23,6 +24,7 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+# Função para converter string em float de forma segura
 def safe_float(val_str):
     if isinstance(val_str, str):
         val_str = val_str.replace(',', '.')
@@ -31,13 +33,16 @@ def safe_float(val_str):
         raise ValueError(f"Value '{val_str}' is not a finite float.")
     return v
 
+# Classe responsável por rodar a simulação em uma thread separada para não travar a interface
 class SimulationThread(QThread):
     finished = pyqtSignal(object)
 
+    # Construtor da thread de simulação
     def __init__(self, state):
         super().__init__()
         self.state = state
 
+    # Função principal que executa ao iniciar a thread
     def run(self):
         engine = PowerSystemEngine()
         engine.build_network(self.state)
@@ -45,14 +50,17 @@ class SimulationThread(QThread):
 
         self.finished.emit(engine.results)
 
+# Classe responsável por rodar a simulação de curva PV em uma thread separada
 class PVCurveThread(QThread):
     finished = pyqtSignal(object)
 
+    # Construtor da thread de Curva PV
     def __init__(self, state, target_bus):
         super().__init__()
         self.state = state
         self.target_bus = target_bus
 
+    # Função principal que executa a simulação PV ao iniciar a thread
     def run(self):
         engine = PowerSystemEngine()
         engine.build_network(self.state)
@@ -62,7 +70,9 @@ class PVCurveThread(QThread):
             engine.generate_pv_curve(self.target_bus)
         self.finished.emit(engine.results)
 
+# Classe principal que integra a UI com a Engine e gerencia o estado da aplicação
 class MainController:
+    # Construtor do Controlador Principal
     def __init__(self):
         # Definir AppUserModelID para ícone da barra de tarefas do Windows
         if sys.platform == 'win32':
@@ -88,6 +98,7 @@ class MainController:
         self.update_scenarios_combo()
 
 
+    # Salva as configurações de parâmetros no QSettings do sistema
     def save_settings(self):
         settings = QSettings("SimuladorSEP", "Parametros")
 
@@ -125,6 +136,7 @@ class MainController:
             }
         settings.setValue("cables", json.dumps(cables_data))
 
+    # Carrega as configurações de parâmetros salvas anteriormente
     def load_settings(self):
         settings = QSettings("SimuladorSEP", "Parametros")
 
@@ -172,6 +184,7 @@ class MainController:
             except Exception as e:
                 print("Erro ao carregar parâmetros de cabos:", e)
 
+    # Carrega os cenários predefinidos e os cenários do usuário
     def load_scenarios(self):
         default_scenarios = {
             "TCC Ref": {"buses": {"650": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "632": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "645": {"p_load_kw": 170.0, "q_load_kvar": 125.0, "p_gen_kw": 0.0}, "646": {"p_load_kw": 230.0, "q_load_kvar": 132.0, "p_gen_kw": 0.0}, "633": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "634": {"p_load_kw": 340.0, "q_load_kvar": 120.0, "p_gen_kw": 0.0}, "671": {"p_load_kw": 1155.0, "q_load_kvar": 660.0, "p_gen_kw": 0.0}, "684": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}, "611": {"p_load_kw": 170.0, "q_load_kvar": -220.0, "p_gen_kw": 0.0}, "652": {"p_load_kw": 128.0, "q_load_kvar": 86.0, "p_gen_kw": 0.0}, "692": {"p_load_kw": 170.0, "q_load_kvar": 151.0, "p_gen_kw": 0.0}, "675": {"p_load_kw": 843.0, "q_load_kvar": -138.0, "p_gen_kw": 0.0}, "680": {"p_load_kw": 0.0, "q_load_kvar": 0.0, "p_gen_kw": 0.0}}, "lines": {"1": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "2": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "3": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "4": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "5": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 0.5, "vk_percent": 4.0, "vkr_percent": 1.0, "pfe_kw": 0.0, "i0_percent": 0.5}, "6": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.6096, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "7": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "8": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.0914, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "9": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.2438, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "10": {"r_ohm_per_km": 0.001, "x_ohm_per_km": 0.001, "length_km": 0.001, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "11": {"r_ohm_per_km": 0.3679, "x_ohm_per_km": 0.4726, "length_km": 0.1524, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}, "12": {"r_ohm_per_km": 0.1155, "x_ohm_per_km": 0.371, "length_km": 0.3048, "sn_mva": 5.0, "vk_percent": 5.0, "vkr_percent": 1.0, "pfe_kw": 10.0, "i0_percent": 0.5}}},
@@ -189,11 +202,13 @@ class MainController:
             except:
                 self.scenarios = default_scenarios
 
+    # Salva todos os cenários no QSettings do sistema
     def save_scenarios(self):
         settings = QSettings("SimuladorSEP", "Cenarios")
         settings.setValue("data", json.dumps(self.scenarios))
         self.update_scenarios_combo()
 
+    # Atualiza a lista da combobox com os cenários disponíveis
     def update_scenarios_combo(self):
         self.ui.combo_scenarios.blockSignals(True)
         self.ui.combo_scenarios.clear()
@@ -201,6 +216,7 @@ class MainController:
         self.ui.combo_scenarios.addItems(list(self.scenarios.keys()))
         self.ui.combo_scenarios.blockSignals(False)
 
+    # Evento acionado quando o usuário seleciona um cenário na combobox
     def on_scenario_selected(self, idx):
         if idx <= 0:
             return
@@ -213,6 +229,7 @@ class MainController:
             self.save_settings()
             self.ui.toast.show_toast(f"Cenário '{name}' carregado!", True, self.ui)
 
+    # Aplica os dados de um cenário específico ao estado atual do sistema
     def apply_scenario_data(self, scen_data):
         buses_data = scen_data.get("buses", {})
         for bus_id_str, data in buses_data.items():
@@ -235,6 +252,7 @@ class MainController:
                 self.state.lines[line_id].pfe_kw = float(data.get("pfe_kw", self.state.lines[line_id].pfe_kw))
                 self.state.lines[line_id].i0_percent = float(data.get("i0_percent", self.state.lines[line_id].i0_percent))
 
+    # Ação disparada pelo botão de salvar um novo cenário
     def save_scenario_action(self):
         from PyQt6.QtWidgets import QInputDialog
         name, ok = QInputDialog.getText(self.ui, "Salvar Cenário", "Nome do Cenário:")
@@ -264,6 +282,7 @@ class MainController:
             self.save_scenarios()
             self.ui.toast.show_toast(f"Cenário '{name}' salvo!", True, self.ui)
 
+    # Ação disparada pelo botão de excluir um cenário existente
     def delete_scenario_action(self):
         from PyQt6.QtWidgets import QInputDialog, QMessageBox
         if not self.scenarios:
@@ -277,6 +296,7 @@ class MainController:
             self.save_scenarios()
             self.ui.toast.show_toast(f"Cenário '{item}' excluído!", True, self.ui)
 
+    # Ação disparada pelo botão de renomear um cenário existente
     def rename_scenario_action(self):
         from PyQt6.QtWidgets import QInputDialog, QMessageBox
         if not self.scenarios:
@@ -298,6 +318,7 @@ class MainController:
                 self.save_scenarios()
                 self.ui.toast.show_toast(f"Cenário renomeado para '{new_name}'!", True, self.ui)
 
+    # Inicializa os dados padrões do sistema IEEE de 13 barras
     def init_default_data(self):
         # Sistema de 13 barras baseado no layout do IEEE 13 Node Test Feeder
         self.state.buses[650] = BusData(id=650, name="650 (Slack)", vn_kv=13.8, type='slack', v_target_pu=1.0)
@@ -331,6 +352,7 @@ class MainController:
 
         self.populate_params_tables()
 
+    # Estabelece as conexões de sinais (signals) e slots da UI
     def setup_connections(self):
         self.ui.btn_simulate.clicked.connect(self.run_simulation)
         self.ui.btn_simulate_pv.clicked.connect(self.run_pv_simulation)
@@ -349,11 +371,13 @@ class MainController:
         self.ui.btn_add_cable.clicked.connect(self.add_cable)
         self.ui.btn_remove_cable.clicked.connect(self.remove_cable)
 
+    # Callback invocado quando um nó do diagrama é alterado
     def on_diagram_data_updated(self):
         self.update_diagram()
         self.populate_params_tables()
         self.save_settings()
         
+    # Ação para adicionar um novo cabo personalizado
     def add_cable(self):
         from PyQt6.QtWidgets import QInputDialog
         name, ok = QInputDialog.getText(self.ui, "Novo Cabo", "Nome do Cabo:")
@@ -362,6 +386,7 @@ class MainController:
             self.populate_params_tables()
             self.save_settings()
             
+    # Ação para remover um cabo selecionado
     def remove_cable(self):
         from PyQt6.QtWidgets import QInputDialog
         if not self.state.cables:
@@ -373,6 +398,7 @@ class MainController:
             self.populate_params_tables()
             self.save_settings()
 
+    # Preenche todas as tabelas de parâmetros com os dados do SystemState
     def populate_params_tables(self):
         from PyQt6.QtWidgets import QTableWidgetItem
         # Preencher Cabos
@@ -454,6 +480,7 @@ class MainController:
         self.adjust_table_size(self.ui.table_params_lines)
         self.adjust_table_size(self.ui.table_params_trafos)
 
+    # Ajusta as alturas e larguras mínimas das tabelas da interface
     def adjust_table_size(self, table):
         h = table.horizontalHeader().height()
         for i in range(table.rowCount()):
@@ -465,6 +492,7 @@ class MainController:
             w += table.columnWidth(i)
         table.setMinimumWidth(w + 30)
 
+    # Salva as modificações feitas diretamente nas tabelas de parâmetros para o SystemState
     def save_params(self):
         try:
             for i in range(self.ui.table_cables.rowCount()):
@@ -502,6 +530,7 @@ class MainController:
         except ValueError:
             QMessageBox.warning(self.ui, "Erro", "Valores inválidos inseridos. Use apenas números.")
 
+    # Exporta os parâmetros atuais para um arquivo Excel
     def export_params(self):
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -538,6 +567,7 @@ class MainController:
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
+    # Importa parâmetros para o sistema a partir de um arquivo Excel
     def import_params(self):
         filename, _ = QFileDialog.getOpenFileName(self.ui, "Importar Parâmetros", "", "Excel Files (*.xlsx)")
         if not filename:
@@ -594,6 +624,7 @@ class MainController:
 
 
 
+    # Exporta o gráfico atual de Curva PV como uma imagem
     def export_plot(self):
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -608,6 +639,7 @@ class MainController:
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
+    # Exporta os resultados da simulação atual para um arquivo Excel
     def export_results(self):
         import datetime
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -654,15 +686,18 @@ class MainController:
         except Exception as e:
             QMessageBox.critical(self.ui, "Erro", f"Erro ao exportar: {str(e)}")
 
+    # Preenche o combobox de barras com barras do tipo 'pq' para a curva PV
     def populate_target_combo(self):
         self.ui.combo_target_bus.clear()
         for bus in self.state.buses.values():
             if bus.type == 'pq':
                 self.ui.combo_target_bus.addItem(bus.name)
 
+    # Chama a interface para desenhar a rede baseada no estado atual do sistema
     def update_diagram(self):
         self.ui.diagram_view.draw_network(self.state)
 
+    # Função que dispara a thread de simulação principal
     def run_simulation(self):
         self.ui.btn_simulate.setEnabled(False)
         self.ui.btn_simulate.setText("Simulando...")
@@ -673,6 +708,7 @@ class MainController:
         self.thread.finished.connect(self.on_simulation_finished)
         self.thread.start()
 
+    # Callback invocado quando a thread de simulação termina sua execução
     def on_simulation_finished(self, results):
         self.ui.btn_simulate.setEnabled(True)
         self.ui.btn_simulate.setText("Iniciar Simulação")
@@ -698,6 +734,7 @@ class MainController:
         self.adjust_table_size(self.ui.table_bus_results)
         self.adjust_table_size(self.ui.table_line_results)
 
+    # Função que dispara a thread de simulação da Curva PV
     def run_pv_simulation(self):
         self.ui.btn_simulate_pv.setEnabled(False)
         self.ui.btn_simulate_pv.setText("Gerando...")
@@ -710,6 +747,7 @@ class MainController:
         self.pv_thread.finished.connect(self.on_pv_simulation_finished)
         self.pv_thread.start()
 
+    # Callback invocado quando a simulação de curva PV termina sua execução
     def on_pv_simulation_finished(self, results):
         self.ui.btn_simulate_pv.setEnabled(True)
         self.ui.btn_simulate_pv.setText("Gerar Curva PV")
@@ -726,6 +764,7 @@ class MainController:
         target_bus = self.ui.combo_target_bus.currentText()
         self.ui.pv_plot.plot_curve(results.pv_curve_p, results.pv_curve_v, target_bus)
 
+    # Inicializa e exibe a interface principal da aplicação
     def run(self):
         self.ui.show()
         sys.exit(self.app.exec())

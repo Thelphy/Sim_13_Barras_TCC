@@ -2,11 +2,14 @@ import pandapower as pp
 import numpy as np
 from data_models import SystemState, SimulationResults
 
+# Classe principal que processa os cálculos da simulação elétrica do sistema
 class PowerSystemEngine:
+    # Inicializa a engine, criando a rede vazia e os objetos de resultado
     def __init__(self):
         self.net = pp.create_empty_network()
         self.results = SimulationResults()
 
+    # Função responsável por construir a rede no Pandapower a partir do SystemState
     def build_network(self, state: SystemState):
         """Constrói a rede elétrica no pandapower com base no estado do sistema."""
         self.net = pp.create_empty_network()
@@ -78,6 +81,7 @@ class PowerSystemEngine:
                                                max_i_ka=line.max_i_ka,
                                                name=f"Line {line_id}")
 
+    # Função que roda o fluxo de potência e armazena os resultados na classe
     def run_power_flow(self):
         """Executa o fluxo de potência e extrai os resultados para a UI."""
         try:
@@ -131,6 +135,7 @@ class PowerSystemEngine:
             self.results.success = False
             print("Power flow failed: An unexpected error occurred.")
 
+    # Função que calcula e extrai os dados para a curva PV da barra solicitada
     def generate_pv_curve(self, target_bus_name: str):
         """Gera a Curva PV para uma barra alvo específica."""
         if not self.results.success:

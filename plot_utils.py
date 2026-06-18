@@ -2,7 +2,9 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+# Classe responsável por gerenciar e desenhar o gráfico da Curva PV
 class PVPlotWidget(QWidget):
+    # Construtor da classe PVPlotWidget, inicializa a figura e o canvas
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
@@ -24,6 +26,7 @@ class PVPlotWidget(QWidget):
         self.ax.spines['right'].set_color('white')
         self.ax.spines['left'].set_color('white')
 
+    # Função que desenha a curva PV no gráfico a partir das listas de potência e tensão
     def plot_curve(self, p_values, v_values, target_bus_name=""):
         self.ax.clear()
 
@@ -64,9 +67,11 @@ class PVPlotWidget(QWidget):
         self.canvas.draw()
 
 
+    # Função para exportar a imagem da figura atual do gráfico
     def export_plot(self, filename):
         self.figure.savefig(filename, bbox_inches='tight')
 
+# Função utilitária para preencher as tabelas de resultados na interface
 def populate_table(table_widget: QTableWidget, data: list, headers: list):
     table_widget.clear()
     table_widget.setRowCount(len(data))

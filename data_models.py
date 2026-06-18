@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 
 @dataclass
+# Classe que representa os dados de cada barra do sistema
 class BusData:
     """Dados das barras do sistema"""
     id: int
@@ -17,6 +18,7 @@ class BusData:
     q_load_enabled: bool = True
 
 @dataclass
+# Classe que armazena as informações e parâmetros de uma linha de transmissão
 class LineData:
     """Dados das linhas de transmissão"""
     id: int
@@ -35,6 +37,7 @@ class LineData:
     i0_percent: float = 0.5
 
 @dataclass
+# Classe para armazenar os parâmetros físicos e elétricos dos cabos
 class CableConfig:
     """Configurações dos cabos"""
     name: str
@@ -42,6 +45,7 @@ class CableConfig:
     x_ohm_per_km: float
 
 @dataclass
+# Classe responsável por agregar os dados do sistema, como barras, linhas e cabos
 class SystemState:
     """Estado do sistema"""
     buses: Dict[int, BusData] = field(default_factory=dict)
@@ -49,6 +53,7 @@ class SystemState:
     cables: Dict[str, CableConfig] = field(default_factory=dict)
 
 @dataclass
+# Classe para armazenar os resultados do fluxo de potência e curvas da simulação
 class SimulationResults:
     """Resultados da simulação"""
     success: bool = False
