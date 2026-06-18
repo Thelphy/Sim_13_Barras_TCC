@@ -3,6 +3,7 @@ from typing import List, Dict
 
 @dataclass
 class BusData:
+    """Dados das barras do sistema"""
     id: int
     name: str
     vn_kv: float
@@ -17,6 +18,7 @@ class BusData:
 
 @dataclass
 class LineData:
+    """Dados das linhas de transmissão"""
     id: int
     from_bus: int
     to_bus: int
@@ -34,22 +36,23 @@ class LineData:
 
 @dataclass
 class CableConfig:
+    """Configurações dos cabos"""
     name: str
     r_ohm_per_km: float
     x_ohm_per_km: float
 
 @dataclass
 class SystemState:
+    """Estado do sistema"""
     buses: Dict[int, BusData] = field(default_factory=dict)
     lines: Dict[int, LineData] = field(default_factory=dict)
     cables: Dict[str, CableConfig] = field(default_factory=dict)
 
 @dataclass
 class SimulationResults:
+    """Resultados da simulação"""
     success: bool = False
     bus_results: List[list] = field(default_factory=list)
     line_results: List[list] = field(default_factory=list)
-    eigenvalues: List[float] = field(default_factory=list)
-    participation_factors: Dict[int, float] = field(default_factory=dict)
     pv_curve_p: List[float] = field(default_factory=list)
     pv_curve_v: List[float] = field(default_factory=list)

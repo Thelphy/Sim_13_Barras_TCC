@@ -81,7 +81,7 @@ class ToastNotification(QWidget):
 
         self.layout.addWidget(self.card)
 
-        # Shadow
+        # Sombra
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(10)
         shadow.setColor(Qt.GlobalColor.black)
@@ -103,7 +103,7 @@ class ToastNotification(QWidget):
         self.adjustSize()
 
         if parent_widget:
-            # Position at top right of parent
+            # Posicionar no canto superior direito do pai
             parent_geom = parent_widget.geometry()
             parent_pos = parent_widget.mapToGlobal(parent_widget.rect().topLeft())
 
@@ -123,7 +123,7 @@ class MainWindowUI(QMainWindow):
         self.setWindowTitle("TCC Lucass 13 Bus")
         self.resize(1200, 800)
 
-        # Load window geometry
+        # Carregar geometria da janela
         settings = QSettings("SimuladorSEP", "App")
         geom = settings.value("geometry")
         if geom:
@@ -160,11 +160,11 @@ class MainWindowUI(QMainWindow):
         self.tab1 = QWidget()
         layout = QVBoxLayout(self.tab1)
 
-        # Diagram
+        # Diagrama
         self.diagram_view = NetworkDiagram()
         layout.addWidget(self.diagram_view, stretch=1)
 
-        # Floating window for scenarios
+        # Janela flutuante para cenários
         self.scenario_panel = QWidget(self.diagram_view)
         self.scenario_panel.setStyleSheet("QWidget { background-color: rgba(30, 30, 30, 230); border-radius: 12px; border: 1px solid #555; } QLabel { background: transparent; border: none; font-size: 16px; } QComboBox { background: #2d2d2d; font-size: 16px; padding: 8px; }")
         sc_layout = QVBoxLayout(self.scenario_panel)
@@ -176,7 +176,7 @@ class MainWindowUI(QMainWindow):
         self.scenario_panel.move(20, 20)
         self.scenario_panel.resize(280, 110)
 
-        # Control Panel
+        # Painel de Controle
         from PyQt6.QtWidgets import QProgressBar
         control_panel = QHBoxLayout()
         
@@ -204,28 +204,28 @@ class MainWindowUI(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Vertical)
 
-        # Top half: Buses
+        # Metade superior: Barras
         top_widget = QWidget()
         top_layout = QVBoxLayout(top_widget)
         top_layout.addWidget(QLabel("Parâmetros das Barras"))
         self.table_params_buses = QTableWidget()
         top_layout.addWidget(self.table_params_buses)
 
-        # Middle third: Lines
+        # Terço médio: Linhas
         middle_widget = QWidget()
         middle_layout = QVBoxLayout(middle_widget)
         middle_layout.addWidget(QLabel("Parâmetros das Linhas"))
         self.table_params_lines = QTableWidget()
         middle_layout.addWidget(self.table_params_lines)
 
-        # Bottom third: Transformers
+        # Terço inferior: Transformadores
         bottom_widget = QWidget()
         bottom_layout = QVBoxLayout(bottom_widget)
         bottom_layout.addWidget(QLabel("Parâmetros dos Transformadores"))
         self.table_params_trafos = QTableWidget()
         bottom_layout.addWidget(self.table_params_trafos)
         
-        # Cables Configuration
+        # Configuração de Cabos
         cables_widget = QWidget()
         cables_layout = QVBoxLayout(cables_widget)
         cables_layout.addWidget(QLabel("Padrões de Cabos"))
@@ -276,30 +276,22 @@ class MainWindowUI(QMainWindow):
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
-        # Nodal Voltages
+        # Tensões Nodais
         widget_bus = QWidget()
         layout_bus = QVBoxLayout(widget_bus)
         layout_bus.addWidget(QLabel("Resultados: Fluxo de Potência (Tensões Nodais)"))
         self.table_bus_results = QTableWidget()
         layout_bus.addWidget(self.table_bus_results)
 
-        # Line Flows
+        # Fluxos nas Linhas
         widget_line = QWidget()
         layout_line = QVBoxLayout(widget_line)
         layout_line.addWidget(QLabel("Resultados: Fluxo nas Linhas"))
         self.table_line_results = QTableWidget()
         layout_line.addWidget(self.table_line_results)
 
-        # Modal Analysis Results
-        widget_modal = QWidget()
-        layout_modal = QVBoxLayout(widget_modal)
-        layout_modal.addWidget(QLabel("Análise Modal (Autovalores Dominantes / Fatores de Participação)"))
-        self.table_modal_results = QTableWidget()
-        layout_modal.addWidget(self.table_modal_results)
-
         splitter.addWidget(widget_bus)
         splitter.addWidget(widget_line)
-        splitter.addWidget(widget_modal)
         layout.addWidget(splitter)
 
         self.btn_export_results = QPushButton("Exportar Resultados")
@@ -313,7 +305,7 @@ class MainWindowUI(QMainWindow):
         self.pv_plot = PVPlotWidget()
         layout.addWidget(self.pv_plot)
 
-        # PV Curve Control Panel
+        # Painel de Controle da Curva PV
         from PyQt6.QtWidgets import QProgressBar
         control_panel = QHBoxLayout()
         self.lbl_target = QLabel("Barra Alvo (Curva PV):")
