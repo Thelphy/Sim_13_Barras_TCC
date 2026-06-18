@@ -189,7 +189,7 @@ class GraphLineItem(QGraphicsLineItem):
         self.line_data = line
         self.diagram_view = diagram_view
         pen = QPen(QColor(200, 200, 200))
-        pen.setWidth(3)
+        pen.setWidth(5)
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
 
@@ -210,9 +210,9 @@ class GraphTrafoItem(QGraphicsItemGroup):
         my = (y1 + y2) / 2
 
         # Draw two intersecting circles
-        r = 10
+        r = 14
         pen = QPen(QColor(200, 200, 200))
-        pen.setWidth(2)
+        pen.setWidth(4)
 
         # Calculate angle of the line
         import math
@@ -320,7 +320,7 @@ class NetworkDiagram(QGraphicsView):
                 self.scene.addItem(item)
 
         # Draw buses (after lines so they appear on top)
-        bus_radius = 15
+        bus_radius = 20
         for bus_id, bus in system_state.buses.items():
             x, y = self.bus_coords[bus_id]
             bus_item = GraphBusItem(x, y, bus_radius, bus, self)
@@ -328,6 +328,7 @@ class NetworkDiagram(QGraphicsView):
 
             text = QGraphicsTextItem(bus.name)
             text.setDefaultTextColor(Qt.GlobalColor.white)
+            text.setFont(QFont("Arial", 10))
             text.setPos(x - bus_radius, y + bus_radius)
             self.scene.addItem(text)
 
@@ -363,7 +364,7 @@ class NetworkDiagram(QGraphicsView):
 
                 text_item = QGraphicsTextItem(f"V: {v_pu} pu\nP: {p_mw} MW\nQ: {q_mvar} MVAr")
                 text_item.setDefaultTextColor(Qt.GlobalColor.white)
-                font = QFont("Arial", 8)
+                font = QFont("Arial", 12)
                 text_item.setFont(font)
 
                 rect_item = QGraphicsRectItem(text_item.boundingRect())
