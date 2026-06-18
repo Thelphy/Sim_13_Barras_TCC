@@ -17,6 +17,7 @@ def build_app():
         "--noconfirm",
         "--name", "TCC Lucass 13 Bus",
         "--windowed",
+        "--onefile",
         "--icon", "Logo.png",
         "--add-data", "Logo.png;.",
         "main.py"

@@ -17,8 +17,9 @@ QTabWidget::pane {
 QTabBar::tab {
     background: #2d2d2d;
     color: white;
-    padding: 10px 20px;
+    padding: 15px 30px;
     border: 1px solid #3a3a3a;
+    font-size: 16px;
 }
 QTabBar::tab:selected {
     background: #007acc;
@@ -36,25 +37,28 @@ QPushButton:hover {
 }
 QLabel {
     color: white;
-    font-size: 14px;
+    font-size: 18px;
 }
 QComboBox {
     background-color: #2d2d2d;
     color: white;
     border: 1px solid #3a3a3a;
-    padding: 5px;
+    padding: 8px;
+    font-size: 16px;
 }
 QTableWidget {
     background-color: #2d2d2d;
     color: white;
     gridline-color: #3a3a3a;
     border: none;
+    font-size: 14px;
 }
 QHeaderView::section {
     background-color: #3a3a3a;
     color: white;
-    padding: 4px;
+    padding: 8px;
     border: 1px solid #2d2d2d;
+    font-size: 14px;
 }
 """
 
@@ -72,7 +76,7 @@ class ToastNotification(QWidget):
         self.card_layout = QHBoxLayout(self.card)
 
         self.label = QLabel("")
-        self.label.setStyleSheet("color: white; font-weight: bold;")
+        self.label.setStyleSheet("color: white; font-weight: bold; font-size: 16px;")
         self.card_layout.addWidget(self.label)
 
         self.layout.addWidget(self.card)
@@ -92,9 +96,9 @@ class ToastNotification(QWidget):
     def show_toast(self, message, is_success, parent_widget, duration=3000):
         self.label.setText(message)
         if is_success:
-            self.card.setStyleSheet("QWidget#card { background-color: #28a745; border-radius: 5px; padding: 10px; }")
+            self.card.setStyleSheet("QWidget#card { background-color: #28a745; border-radius: 8px; padding: 15px; }")
         else:
-            self.card.setStyleSheet("QWidget#card { background-color: #dc3545; border-radius: 5px; padding: 10px; }")
+            self.card.setStyleSheet("QWidget#card { background-color: #dc3545; border-radius: 8px; padding: 15px; }")
 
         self.adjustSize()
 
@@ -117,7 +121,7 @@ class MainWindowUI(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("TCC Lucass 13 Bus")
-        self.resize(1000, 700)
+        self.resize(1200, 800)
 
         # Carregar geometria da janela
         settings = QSettings("SimuladorSEP", "App")
@@ -162,15 +166,15 @@ class MainWindowUI(QMainWindow):
 
         # Janela flutuante para cenários
         self.scenario_panel = QWidget(self.diagram_view)
-        self.scenario_panel.setStyleSheet("QWidget { background-color: rgba(30, 30, 30, 230); border-radius: 8px; border: 1px solid #555; } QLabel { background: transparent; border: none; } QComboBox { background: #2d2d2d; }")
+        self.scenario_panel.setStyleSheet("QWidget { background-color: rgba(30, 30, 30, 230); border-radius: 12px; border: 1px solid #555; } QLabel { background: transparent; border: none; font-size: 16px; } QComboBox { background: #2d2d2d; font-size: 16px; padding: 8px; }")
         sc_layout = QVBoxLayout(self.scenario_panel)
         lbl_sc = QLabel("Cenários")
-        lbl_sc.setStyleSheet("font-weight: bold; font-size: 14px;")
+        lbl_sc.setStyleSheet("font-weight: bold; font-size: 18px;")
         self.combo_scenarios = QComboBox()
         sc_layout.addWidget(lbl_sc)
         sc_layout.addWidget(self.combo_scenarios)
-        self.scenario_panel.move(15, 15)
-        self.scenario_panel.resize(220, 80)
+        self.scenario_panel.move(20, 20)
+        self.scenario_panel.resize(280, 110)
 
         # Painel de Controle
         from PyQt6.QtWidgets import QProgressBar

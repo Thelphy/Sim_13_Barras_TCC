@@ -189,7 +189,7 @@ class GraphLineItem(QGraphicsLineItem):
         self.line_data = line
         self.diagram_view = diagram_view
         pen = QPen(QColor(200, 200, 200))
-        pen.setWidth(3)
+        pen.setWidth(5)
         self.setPen(pen)
         self.setToolTip(f"Line {line.id}\nL: {line.length_km}km")
 
@@ -212,7 +212,7 @@ class GraphTrafoItem(QGraphicsItemGroup):
         # Desenhar dois círculos que se interceptam
         r = 10
         pen = QPen(QColor(200, 200, 200))
-        pen.setWidth(2)
+        pen.setWidth(4)
 
         # Calcular o ângulo da linha
         import math
@@ -328,6 +328,7 @@ class NetworkDiagram(QGraphicsView):
 
             text = QGraphicsTextItem(bus.name)
             text.setDefaultTextColor(Qt.GlobalColor.white)
+            text.setFont(QFont("Arial", 10))
             text.setPos(x - bus_radius, y + bus_radius)
             self.scene.addItem(text)
 
@@ -363,7 +364,7 @@ class NetworkDiagram(QGraphicsView):
 
                 text_item = QGraphicsTextItem(f"V: {v_pu} pu\nP: {p_mw} MW\nQ: {q_mvar} MVAr")
                 text_item.setDefaultTextColor(Qt.GlobalColor.white)
-                font = QFont("Arial", 8)
+                font = QFont("Arial", 12)
                 text_item.setFont(font)
 
                 rect_item = QGraphicsRectItem(text_item.boundingRect())
